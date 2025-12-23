@@ -1,0 +1,8 @@
+{
+  "name": "HealthCreator AI Assistant",
+  "description": "A comprehensive tool for health content creators to manage channels, projects, and AI-powered content generation tailored for various age demographics.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
