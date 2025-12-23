@@ -61,22 +61,38 @@ export const groqOutlineAdapter = async (topic: string, age: string, niche: stri
    }
 };
 
-export const generateWeeklyPlan = async (niche: string, targetAge: string, language: string = 'id') => {
+// UPDATE BAGIAN INI (Parameter ke-4 ditambahkan: focusFormat)
+export const generateWeeklyPlan = async (niche: string, targetAge: string, language: string = 'id', focusFormat?: string) => {
+  
+  // Logic Prompt: Sama persis kayak Gemini, biar Groq juga pinter milih tema
+  let instruction = "";
+  if (focusFormat) {
+      instruction = `
+      Create a 5-day content calendar where EVERY DAY focuses on the format: "${focusFormat}".
+      Example: If format is 'Listicle', Day 1 could be "5 Foods...", Day 2 "5 Habits...", etc.
+      Make sure the topics are varied even if the format is the same.`;
+  } else {
+      instruction = `
+      The content mix must be STRICTLY EDUCATIONAL & MEDICAL with VARIED FORMATS:
+      - Day 1: Medical Myth Busting
+      - Day 2: Clinical Case Study / Bedah Kasus
+      - Day 3: Medical Hack / Tips
+      - Day 4: Deep Dive / Explanation
+      - Day 5: Q&A / FAQ`;
+  }
+
   const prompt = `
-    Act as a senior social media strategist for a health channel focusing on "${niche}" for "${targetAge}".
-    Create a 5-day content calendar (Monday to Friday) that creates a cohesive mini-series.
+    Act as a generic professional Doctor / Medical Expert specializing in "${niche}" for audience "${targetAge}".
+    Create a 5-day content calendar (Monday to Friday).
     
-    The content mix must be:
-    - Day 1: Educational / Myth Busting (High value)
-    - Day 2: Patient Story / Case Study (Relatable)
-    - Day 3: Quick Tip / Hack (Viral potential)
-    - Day 4: Deep Dive / Explanation (Authority)
-    - Day 5: Q&A / Interaction (Engagement)
+    ${instruction}
 
     Language: ${language === 'id' ? 'Indonesian (Bahasa Indonesia)' : 'English'}.
+    Tone: Professional, Empathetic, Scientific but easy to understand.
+    
     Output ONLY valid JSON array without markdown formatting. Structure:
     [
-      { "day": "Senin", "type": "Mitos", "title": "...", "hook": "..." },
+      { "day": "Senin", "type": "${focusFormat || 'Mitos'}", "title": "...", "hook": "..." },
       ...
     ]
   `;

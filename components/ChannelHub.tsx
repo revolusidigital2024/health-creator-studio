@@ -1,22 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { Channel, Project, Language } from '../types';
-import { translations } from '../services/translations';
 import { 
   Search, 
   Plus, 
   Layout, 
   Video, 
-  Users, 
   Trash2, 
   ArrowRight, 
   Activity,
   Zap,
-  MoreVertical
 } from 'lucide-react';
-import { cn } from '../lib/utils'; // Pastikan buat file utils.ts atau hapus import ini dan function cn-nya kalau mau manual
+import { cn } from '../lib/utils';
 
-// --- UI COMPONENTS (Inline biar gampang copy) ---
-// Kalau mau rapi, pisahkan ini ke folder components/ui nanti
+// --- UI COMPONENTS (Internal) ---
 
 const StatCard = ({ icon: Icon, label, value, trend }: any) => (
   <div className="bg-white border border-slate-200 p-5 rounded-2xl flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
@@ -24,17 +20,17 @@ const StatCard = ({ icon: Icon, label, value, trend }: any) => (
       <Icon size={24} />
     </div>
     <div>
-      <p className="text-slate-500 text-sm font-medium">{label}</p>
+      <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">{label}</p>
       <div className="flex items-baseline gap-2">
-        <h4 className="text-2xl font-bold text-slate-900">{value}</h4>
-        {trend && <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">{trend}</span>}
+        <h4 className="text-2xl font-black text-slate-900">{value}</h4>
+        {trend && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{trend}</span>}
       </div>
     </div>
   </div>
 );
 
 const Badge = ({ children, className }: { children: React.ReactNode, className?: string }) => (
-  <span className={cn("px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider", className)}>
+  <span className={cn("px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider", className)}>
     {children}
   </span>
 );
@@ -55,11 +51,9 @@ export const ChannelHub: React.FC<ChannelHubProps> = ({
   projects,
   onSelectChannel, 
   onCreateNew,
-  onDeleteChannel,
-  language
+  onDeleteChannel
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const t = translations[language];
 
   // Filtering Logic
   const filteredChannels = useMemo(() => {
@@ -83,37 +77,37 @@ export const ChannelHub: React.FC<ChannelHubProps> = ({
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto py-8 px-6 space-y-8 animate-in fade-in duration-500">
+    <div className="max-w-[1600px] mx-auto py-4 space-y-8 animate-in fade-in duration-500">
       
       {/* 1. HERO & STATS SECTION (Bento Grid Style) */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Welcome Block */}
-        <div className="lg:col-span-2 bg-slate-900 text-white p-8 rounded-[2rem] relative overflow-hidden flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-slate-900 text-white p-8 rounded-[2rem] relative overflow-hidden flex flex-col justify-between min-h-[240px] shadow-2xl">
           <div className="relative z-10">
-            <h1 className="text-3xl font-bold mb-2">Creator Command Center</h1>
-            <p className="text-slate-400 max-w-md">
-              Kelola semua niche kesehatan Anda dari satu tempat. AI siap membantu generate konten.
+            <h1 className="text-3xl font-black mb-2 tracking-tight">Pusat Komando Kreator</h1>
+            <p className="text-slate-400 max-w-sm text-sm leading-relaxed">
+              Kelola semua niche kesehatan Anda dari satu tempat. AI siap membantu meracik konten viral.
             </p>
           </div>
           <div className="relative z-10 mt-8">
              <button
               onClick={onCreateNew}
-              className="bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 w-fit shadow-lg shadow-emerald-900/20"
+              className="bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 w-fit shadow-lg shadow-emerald-900/20 hover:scale-105 active:scale-95"
             >
               <Plus size={20} />
-              {t.add_channel}
+              Tambah Channel Baru
             </button>
           </div>
           {/* Decorative Pattern */}
-          <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
         </div>
 
         {/* Global Stats */}
         <div className="lg:col-span-2 grid grid-cols-2 gap-4">
-          <StatCard icon={Layout} label="Active Channels" value={channels.length} trend="+1 New" />
-          <StatCard icon={Video} label="Total Projects" value={projects.length} />
-          <StatCard icon={Zap} label="Ideas & Drafts" value={totalDrafts} />
-          <StatCard icon={Activity} label="Published" value={totalPublished} trend="Live" />
+          <StatCard icon={Layout} label="Channel Aktif" value={channels.length} trend="+1 Baru" />
+          <StatCard icon={Video} label="Total Proyek" value={projects.length} />
+          <StatCard icon={Zap} label="Ide & Draf" value={totalDrafts} />
+          <StatCard icon={Activity} label="Video Terbit" value={totalPublished} trend="Tayang" />
         </div>
       </div>
 
@@ -123,19 +117,19 @@ export const ChannelHub: React.FC<ChannelHubProps> = ({
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input 
             type="text" 
-            placeholder="Search niche or channel..."
+            placeholder="Cari niche atau nama channel..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border-transparent hover:bg-slate-100 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 rounded-xl outline-none transition-all text-sm font-medium"
+            className="w-full pl-11 pr-4 py-3 bg-slate-50 border-transparent hover:bg-slate-100 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 rounded-xl outline-none transition-all text-sm font-bold text-slate-800"
           />
         </div>
         
-        <div className="flex items-center gap-3 px-4 text-sm text-slate-500 font-medium">
-           <span>Sort by:</span>
-           <select className="bg-transparent outline-none text-slate-900 font-bold cursor-pointer">
-             <option>Last Updated</option>
-             <option>A-Z</option>
-             <option>Most Videos</option>
+        <div className="flex items-center gap-3 px-4 text-xs font-bold text-slate-500">
+           <span>Urutkan:</span>
+           <select className="bg-transparent outline-none text-slate-900 cursor-pointer uppercase">
+             <option>Terbaru</option>
+             <option>Abjad A-Z</option>
+             <option>Video Terbanyak</option>
            </select>
         </div>
       </div>
@@ -143,9 +137,9 @@ export const ChannelHub: React.FC<ChannelHubProps> = ({
       {/* 3. CHANNELS GRID */}
       {filteredChannels.length === 0 ? (
          <div className="text-center py-20 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200">
-           <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">📭</div>
-           <h3 className="text-xl font-bold text-slate-700">No channels found</h3>
-           <p className="text-slate-400 mt-2">Try adjusting your search or create a new one.</p>
+           <div className="w-20 h-20 bg-white shadow-sm rounded-3xl flex items-center justify-center mx-auto mb-6 text-4xl">📭</div>
+           <h3 className="text-xl font-bold text-slate-700">Belum ada channel ditemukan</h3>
+           <p className="text-slate-400 mt-2 text-sm">Coba kata kunci lain atau buat channel baru untuk memulai.</p>
          </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -155,12 +149,12 @@ export const ChannelHub: React.FC<ChannelHubProps> = ({
               <div
                 key={channel.id}
                 onClick={() => onSelectChannel(channel)}
-                className="group bg-white rounded-2xl border border-slate-200 hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-900/5 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col"
+                className="group bg-white rounded-[2rem] border border-slate-200 hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-900/5 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col hover:-translate-y-1"
               >
                 {/* Card Header */}
                 <div className="p-6 pb-4 flex justify-between items-start">
                   <div>
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-3">
                        <Badge className={cn(
                           channel.targetAge === 'Seniors' ? 'bg-purple-100 text-purple-700' :
                           channel.targetAge === 'Kids' ? 'bg-orange-100 text-orange-700' :
@@ -169,9 +163,9 @@ export const ChannelHub: React.FC<ChannelHubProps> = ({
                          {channel.targetAge}
                        </Badge>
                        <span className="text-slate-300">•</span>
-                       <span className="text-xs font-medium text-slate-500">{channel.niche}</span>
+                       <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{channel.niche}</span>
                     </div>
-                    <h3 className="text-xl font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">
+                    <h3 className="text-2xl font-black text-slate-900 group-hover:text-emerald-600 transition-colors leading-tight">
                       {channel.name}
                     </h3>
                   </div>
@@ -179,9 +173,10 @@ export const ChannelHub: React.FC<ChannelHubProps> = ({
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        if(confirm('Delete channel?')) onDeleteChannel(channel.id);
+                        if(confirm('Hapus channel ini beserta semua videonya?')) onDeleteChannel(channel.id);
                       }}
-                      className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                      title="Hapus Channel"
                     >
                       <Trash2 size={18} />
                     </button>
@@ -190,33 +185,33 @@ export const ChannelHub: React.FC<ChannelHubProps> = ({
 
                 {/* Card Body (Stats) */}
                 <div className="px-6 py-2 grid grid-cols-3 gap-2">
-                  <div className="bg-slate-50 p-2 rounded-lg text-center">
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Videos</p>
-                    <p className="text-lg font-bold text-slate-700">{stats.total}</p>
+                  <div className="bg-slate-50 p-2.5 rounded-xl text-center">
+                    <p className="text-[9px] text-slate-400 uppercase font-black tracking-widest mb-1">Video</p>
+                    <p className="text-lg font-black text-slate-700">{stats.total}</p>
                   </div>
-                  <div className="bg-emerald-50 p-2 rounded-lg text-center">
-                    <p className="text-[10px] text-emerald-600/70 uppercase font-bold">Live</p>
-                    <p className="text-lg font-bold text-emerald-600">{stats.published}</p>
+                  <div className="bg-emerald-50 p-2.5 rounded-xl text-center">
+                    <p className="text-[9px] text-emerald-600/70 uppercase font-black tracking-widest mb-1">Tayang</p>
+                    <p className="text-lg font-black text-emerald-600">{stats.published}</p>
                   </div>
-                  <div className="bg-amber-50 p-2 rounded-lg text-center">
-                     <p className="text-[10px] text-amber-600/70 uppercase font-bold">Drafts</p>
-                     <p className="text-lg font-bold text-amber-600">{stats.drafts}</p>
+                  <div className="bg-amber-50 p-2.5 rounded-xl text-center">
+                     <p className="text-[9px] text-amber-600/70 uppercase font-black tracking-widest mb-1">Draf</p>
+                     <p className="text-lg font-black text-amber-600">{stats.drafts}</p>
                   </div>
                 </div>
 
-                <div className="px-6 py-4 flex-1">
-                   <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed">
-                     {channel.description || "No description provided."}
+                <div className="px-6 py-5 flex-1">
+                   <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed font-medium">
+                     {channel.description || "Tidak ada deskripsi."}
                    </p>
                 </div>
 
                 {/* Card Footer */}
-                <div className="p-4 bg-slate-50 border-t border-slate-100 mt-auto flex justify-between items-center group-hover:bg-emerald-50/50 transition-colors">
-                  <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                    <Activity size={12} /> Last active: Today
+                <div className="p-5 bg-slate-50 border-t border-slate-100 mt-auto flex justify-between items-center group-hover:bg-emerald-50/30 transition-colors">
+                  <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 uppercase tracking-wide">
+                    <Activity size={12} /> Aktif: Hari ini
                   </span>
-                  <button className="text-sm font-bold text-slate-900 flex items-center gap-1 group-hover:gap-2 transition-all">
-                    Manage <ArrowRight size={16} />
+                  <button className="text-xs font-black text-slate-900 flex items-center gap-1 group-hover:gap-2 transition-all uppercase tracking-widest">
+                    Kelola <ArrowRight size={14} />
                   </button>
                 </div>
               </div>

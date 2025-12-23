@@ -1,200 +1,233 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Project, Channel, Language } from '../types';
-import { translations } from '../services/translations';
-import { Video, Calendar, Filter, Plus, TrendingUp, Search } from 'lucide-react';
+import { 
+  Video, Calendar, Filter, Plus, TrendingUp, Search, 
+  ArrowLeft, LayoutGrid, List, MoreHorizontal, Clock, Edit
+} from 'lucide-react';
+import { cn } from '../lib/utils';
 
 interface ProjectDashboardProps {
   channel: Channel;
   projects: Project[];
   onCreateNew: () => void;
-  language: Language;
+  onBack: () => void;
+  // TAMBAHAN: Prop buat handle klik Manage
+  onManageProject: (project: Project) => void;
 }
 
-export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ channel, projects, onCreateNew, language }) => {
-  const t = translations[language];
+export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ 
+  channel, projects, onCreateNew, onBack, onManageProject 
+}) => {
+  // --- STATE ---
+  const [viewMode, setViewMode] = useState<'list' | 'board'>(() => {
+    return (localStorage.getItem('dashboard_view_mode') as 'list' | 'board') || 'list';
+  });
+  
   const [activeTab, setActiveTab] = useState<'All' | 'Idea' | 'Published'>('All');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Filter Logic: Tab + Search
+  // Persist View Mode
+  useEffect(() => {
+    localStorage.setItem('dashboard_view_mode', viewMode);
+  }, [viewMode]);
+
+  // --- FILTER LOGIC ---
   const filteredProjects = projects.filter(p => {
     const matchesTab = activeTab === 'All' ? true : p.status === activeTab || (activeTab === 'Idea' && p.status !== 'Published');
     const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
   });
 
+  // --- HELPER: KANBAN COLUMNS ---
+  const columns = {
+    Idea: projects.filter(p => p.status === 'Idea'),
+    Drafting: projects.filter(p => p.status === 'Drafting'),
+    Editing: projects.filter(p => p.status === 'Editing'),
+    Published: projects.filter(p => p.status === 'Published'),
+  };
+
   return (
-    <div className="max-w-[1920px] mx-auto space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-[1920px] mx-auto space-y-8 pb-32 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      {/* 1. TOP BAR: Breadcrumbs + Action */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-           <div className="flex items-center gap-2 text-slate-500 mb-1">
-              <span className="text-[10px] font-bold uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded text-slate-500">Workspace</span>
-              <span className="text-[10px] text-slate-300">/</span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">{channel.niche}</span>
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative">
+        <div className="flex items-center gap-4">
+           <button 
+             onClick={onBack}
+             className="p-3 bg-white border border-slate-200 rounded-2xl hover:border-slate-400 hover:shadow-md transition-all group"
+             title="Kembali ke Daftar Channel"
+           >
+             <ArrowLeft size={20} className="text-slate-400 group-hover:text-slate-900" />
+           </button>
+
+           <div>
+              <div className="flex items-center gap-2 text-slate-500 mb-1">
+                 <span className="text-[10px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded">Workspace Aktif</span>
+                 <span className="text-[10px] text-slate-300">/</span>
+                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">{channel.niche}</span>
+              </div>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Manajemen Proyek</h2>
            </div>
-           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">{t.video_projects}</h2>
         </div>
-        <button
-          onClick={onCreateNew}
-          className="bg-slate-900 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg shadow-slate-200 hover:shadow-emerald-200 text-sm"
-        >
-          <Plus size={18} />
-          {t.new_video}
-        </button>
+
+        <div className="flex items-center gap-3 w-full md:w-auto">
+           <div className="bg-slate-100 p-1 rounded-xl flex items-center">
+              <button onClick={() => setViewMode('list')} className={cn("p-2 rounded-lg transition-all", viewMode === 'list' ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}>
+                <List size={18} />
+              </button>
+              <button onClick={() => setViewMode('board')} className={cn("p-2 rounded-lg transition-all", viewMode === 'board' ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}>
+                <LayoutGrid size={18} />
+              </button>
+           </div>
+
+           <button
+             onClick={onCreateNew}
+             className="flex-1 md:flex-none bg-slate-900 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl active:scale-95"
+           >
+             <Plus size={18} />
+             Video Baru
+           </button>
+        </div>
       </div>
 
-      {/* 2. STATS OVERVIEW (Compact & Horizontal) */}
-      {/* Kita ganti Radar dengan Quick Stats yang lebih relevan buat manajemen */}
+      {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Card 1: Authority (Tetap ada buat keren-kerenan/gamification) */}
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-6 rounded-2xl text-white relative overflow-hidden flex items-center justify-between shadow-md">
+        <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-[2rem] text-white relative overflow-hidden flex items-center justify-between shadow-lg">
              <div>
-                <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest mb-1">Authority Score</p>
+                <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest mb-1">Skor Otoritas</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black">84</span>
+                  <span className="text-4xl font-black">84</span>
                   <span className="text-slate-400 text-xs">/100</span>
                 </div>
              </div>
-             <div className="h-10 w-10 bg-white/10 rounded-full flex items-center justify-center">
-                <TrendingUp className="text-emerald-400" size={20} />
+             <div className="h-12 w-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                <TrendingUp className="text-emerald-400" size={24} />
              </div>
         </div>
-
-        {/* Card 2: Total Projects */}
-        <div className="bg-white border border-slate-200 p-6 rounded-2xl flex items-center justify-between shadow-sm">
+        <div className="bg-white border border-slate-200 p-6 rounded-[2rem] flex items-center justify-between shadow-sm hover:border-emerald-200 transition-colors">
              <div>
-                <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Total Library</p>
-                <span className="text-3xl font-bold text-slate-800">{projects.length}</span>
+                <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Total Koleksi</p>
+                <span className="text-4xl font-black text-slate-800">{projects.length}</span>
              </div>
-             <div className="h-10 w-10 bg-slate-50 rounded-full flex items-center justify-center">
-                <Video className="text-slate-400" size={20} />
+             <div className="h-12 w-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300">
+                <Video size={24} />
              </div>
         </div>
-
-        {/* Card 3: Pending/Idea */}
-        <div className="bg-white border border-slate-200 p-6 rounded-2xl flex items-center justify-between shadow-sm">
+        <div className="bg-white border border-slate-200 p-6 rounded-[2rem] flex items-center justify-between shadow-sm hover:border-amber-200 transition-colors">
              <div>
-                <p className="text-amber-500 text-[10px] font-black uppercase tracking-widest mb-1">Drafts & Ideas</p>
-                <span className="text-3xl font-bold text-slate-800">
+                <p className="text-amber-500 text-[10px] font-black uppercase tracking-widest mb-1">Dalam Pengerjaan</p>
+                <span className="text-4xl font-black text-slate-800">
                   {projects.filter(p => p.status !== 'Published').length}
                 </span>
              </div>
-             <div className="h-10 w-10 bg-amber-50 rounded-full flex items-center justify-center">
-                <Filter className="text-amber-500" size={20} />
+             <div className="h-12 w-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500">
+                <Clock size={24} />
              </div>
         </div>
       </div>
 
-      {/* 3. MAIN PROJECT TABLE (The Hero) */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[500px]">
-         
-         {/* Toolbar: Tabs & Search */}
-         <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row items-center gap-4 bg-slate-50/30">
-            {/* Tabs */}
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-auto">
-              {['All', 'Idea', 'Published'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab as any)}
-                  className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                    activeTab === tab ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex-1 w-full" />
-
-            {/* Search Bar */}
-            <div className="relative w-full sm:w-64">
-               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-               <input 
-                 type="text" 
-                 placeholder="Search projects..." 
-                 value={searchQuery}
-                 onChange={(e) => setSearchQuery(e.target.value)}
-                 className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all"
-               />
-            </div>
-         </div>
-
-         {/* Table Content */}
-         <div className="flex-1 relative">
-           {filteredProjects.length === 0 ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8">
-                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                  <Video className="text-slate-300" size={24} />
-                </div>
-                <h3 className="text-slate-800 font-bold mb-1">
-                  {searchQuery ? 'No matching projects' : 'No projects yet'}
-                </h3>
-                <p className="text-slate-400 text-xs mb-6 max-w-xs mx-auto">
-                  {searchQuery ? 'Try a different keyword' : 'Your workspace is fresh. Start by creating a new video script.'}
-                </p>
-                {!searchQuery && (
-                  <button 
-                    onClick={onCreateNew}
-                    className="px-6 py-2 bg-emerald-50 text-emerald-600 rounded-xl font-bold text-xs hover:bg-emerald-100 transition-colors"
-                  >
-                    + Generate First Script
+      {/* CONTENT AREA */}
+      {viewMode === 'list' ? (
+        <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+           <div className="px-8 py-6 border-b border-slate-100 flex flex-col sm:flex-row items-center gap-6 bg-slate-50/30">
+              <div className="flex gap-1 bg-slate-100 p-1.5 rounded-2xl w-full sm:w-auto">
+                {['All', 'Idea', 'Published'].map((tab) => (
+                  <button key={tab} onClick={() => setActiveTab(tab as any)} className={cn("flex-1 sm:flex-none px-6 py-2 text-xs font-bold rounded-xl transition-all", activeTab === tab ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600')}>
+                    {tab === 'All' ? 'Semua' : tab === 'Idea' ? 'Draf' : 'Tayang'}
                   </button>
-                )}
+                ))}
               </div>
-           ) : (
-             <div className="overflow-x-auto">
-               <table className="w-full">
-                 <thead className="bg-slate-50/50 border-b border-slate-100">
-                   <tr>
-                     <th className="text-left px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-1/2">Video Concept</th>
-                     <th className="text-left px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                     <th className="text-left px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Quality Score</th>
-                     <th className="text-right px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Action</th>
-                   </tr>
-                 </thead>
-                 <tbody className="divide-y divide-slate-50">
-                   {filteredProjects.map((project) => (
-                     <tr key={project.id} className="hover:bg-slate-50 transition-colors group cursor-default">
-                       <td className="px-6 py-4">
-                         <div className="font-bold text-sm text-slate-800 group-hover:text-emerald-700 transition-colors line-clamp-1">{project.title}</div>
-                         <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400 font-medium">
-                           <Calendar size={10} /> 
-                           <span>Last updated: {project.updatedAt}</span>
-                         </div>
-                       </td>
-                       <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
-                            project.status === 'Published' 
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
-                              : 'bg-amber-50 text-amber-700 border-amber-100'
-                          }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${project.status === 'Published' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                            {project.status}
-                          </span>
-                       </td>
-                       <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                             <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.4)]" style={{ width: '85%' }} />
-                             </div>
-                             <span className="text-[10px] font-bold text-slate-700">85</span>
-                          </div>
-                       </td>
-                       <td className="px-6 py-4 text-right">
-                         <button className="text-slate-400 hover:text-emerald-600 hover:bg-white border border-transparent hover:border-slate-200 hover:shadow-sm font-bold text-[10px] uppercase tracking-wider transition-all px-3 py-1.5 rounded-lg">
-                           Manage
-                         </button>
-                       </td>
+              <div className="flex-1 w-full" />
+              <div className="relative w-full sm:w-72">
+                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                 <input type="text" placeholder="Cari judul proyek..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all" />
+              </div>
+           </div>
+
+           <div className="flex-1 relative">
+             {filteredProjects.length === 0 ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8">
+                  <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mb-4">
+                    <Video className="text-slate-300" size={32} />
+                  </div>
+                  <h3 className="text-slate-800 font-bold mb-1 text-lg">{searchQuery ? 'Tidak ditemukan' : 'Belum ada proyek'}</h3>
+                  <p className="text-slate-400 text-sm mb-6 max-w-xs mx-auto">{searchQuery ? 'Coba kata kunci lain.' : 'Workspace ini masih bersih. Mulai dengan membuat skrip video baru.'}</p>
+                  {!searchQuery && <button onClick={onCreateNew} className="px-8 py-3 bg-emerald-50 text-emerald-600 rounded-2xl font-bold text-sm hover:bg-emerald-100 transition-colors">+ Buat Skrip Pertama</button>}
+                </div>
+             ) : (
+               <div className="overflow-x-auto">
+                 <table className="w-full">
+                   <thead className="bg-slate-50/50 border-b border-slate-100">
+                     <tr>
+                       <th className="text-left px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest w-1/2">Konsep Video</th>
+                       <th className="text-left px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                       <th className="text-left px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Skor Kualitas</th>
+                       <th className="text-right px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Aksi</th>
                      </tr>
+                   </thead>
+                   <tbody className="divide-y divide-slate-50">
+                     {filteredProjects.map((project) => (
+                       <tr key={project.id} className="hover:bg-slate-50 transition-colors group cursor-default">
+                         <td className="px-8 py-6">
+                           <div className="font-bold text-base text-slate-800 group-hover:text-emerald-700 transition-colors line-clamp-1">{project.title}</div>
+                           <div className="flex items-center gap-2 mt-1.5 text-[10px] text-slate-400 font-bold"><Calendar size={12} /> <span>Diperbarui: {project.updatedAt}</span></div>
+                         </td>
+                         <td className="px-8 py-6">
+                            <span className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide border", project.status === 'Published' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : project.status === 'Drafting' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-amber-50 text-amber-700 border-amber-100')}>
+                              <span className={cn("w-1.5 h-1.5 rounded-full", project.status === 'Published' ? 'bg-emerald-500' : project.status === 'Drafting' ? 'bg-blue-500' : 'bg-amber-500')} />
+                              {project.status === 'Idea' ? 'Ide' : project.status}
+                            </span>
+                         </td>
+                         <td className="px-8 py-6">
+                            <div className="flex items-center gap-3">
+                               <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: '85%' }} /></div>
+                               <span className="text-xs font-black text-slate-700">85</span>
+                            </div>
+                         </td>
+                         <td className="px-8 py-6 text-right">
+                           {/* TOMBOL MANAGE YANG SUDAH DIPERBAIKI */}
+                           <button 
+                             onClick={() => onManageProject(project)}
+                             className="text-slate-400 hover:text-emerald-600 hover:bg-white border border-transparent hover:border-emerald-200 hover:shadow-sm font-bold text-[10px] uppercase tracking-wider transition-all px-4 py-2 rounded-xl flex items-center gap-2 ml-auto"
+                           >
+                             <Edit size={14} /> Kelola
+                           </button>
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
+             )}
+           </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 h-full items-start">
+           {Object.entries(columns).map(([status, items]) => (
+             <div key={status} className="flex flex-col gap-4">
+                <div className="flex items-center justify-between px-2">
+                   <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">{status === 'Idea' ? 'Ide Mentah' : status === 'Drafting' ? 'Penulisan' : status === 'Editing' ? 'Produksi' : 'Tayang'}</h3>
+                   <span className="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">{items.length}</span>
+                </div>
+                <div className="space-y-3">
+                   {items.length === 0 && <div className="h-32 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center text-slate-300 text-[10px] font-bold uppercase tracking-widest">Kosong</div>}
+                   {items.map(project => (
+                     <div key={project.id} onClick={() => onManageProject(project)} className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md hover:border-emerald-300 cursor-pointer transition-all group">
+                        <div className="flex justify-between items-start mb-3">
+                           <span className={cn("w-2 h-2 rounded-full", status === 'Published' ? 'bg-emerald-500' : status === 'Drafting' ? 'bg-blue-500' : 'bg-amber-500')} />
+                           <button className="text-slate-300 hover:text-slate-600"><MoreHorizontal size={16} /></button>
+                        </div>
+                        <h4 className="font-bold text-slate-800 leading-snug mb-3 line-clamp-2 group-hover:text-emerald-700 transition-colors">{project.title}</h4>
+                        <div className="flex items-center justify-between pt-3 border-t border-slate-50 text-[10px] font-bold text-slate-400">
+                           <span className="flex items-center gap-1"><Calendar size={10}/> {project.updatedAt}</span>
+                        </div>
+                     </div>
                    ))}
-                 </tbody>
-               </table>
+                </div>
              </div>
-           )}
-         </div>
-      </div>
+           ))}
+        </div>
+      )}
     </div>
   );
 };

@@ -2,8 +2,18 @@ export type AgeGroup = 'Kids' | 'Teens' | 'Adults' | 'Seniors';
 export type Language = 'en' | 'id';
 export type VideoDuration = 'short' | 'standard' | 'long';
 
-// Update Model ID sesuai yang ada di Settings.tsx
-export type GeminiModelId = 'gemini-1.5-flash' | 'gemini-1.5-pro';
+// Model ID (Gemini 2.5)
+export type GeminiModelId = 'gemini-2.5-flash' | 'gemini-2.5-pro';
+
+// --- DEFINISI DOKTER (BARU) ---
+export interface DoctorProfile {
+  name: string;
+  gender: 'Male' | 'Female';
+  age: string;
+  appearance: string;
+  outfit: string;
+  voiceType: string;
+}
 
 export interface Channel {
   id: string;
@@ -12,14 +22,8 @@ export interface Channel {
   targetAge: AgeGroup;
   description: string;
   createdAt: string;
-}
-
-export interface Project {
-  id: string;
-  channelId: string;
-  title: string;
-  status: 'Idea' | 'Drafting' | 'Editing' | 'Published';
-  updatedAt: string;
+  // Field baru untuk nyimpen data dokter
+  doctorProfile?: DoctorProfile; 
 }
 
 export interface OutlineSection {
@@ -34,7 +38,7 @@ export interface Persona {
   name: string;
   description: string;
   voiceStyle: string;
-  icon?: string; // Tambahan buat icon persona
+  icon?: string;
 }
 
 export interface ContentIdea {
@@ -45,6 +49,23 @@ export interface ContentIdea {
   thumbnailSuggestion: string;
   audioCues: string;
   persona?: Persona;
+}
+
+export interface Project {
+  id: string;
+  channelId: string;
+  title: string;
+  status: 'Idea' | 'Drafting' | 'Editing' | 'Published';
+  updatedAt: string;
+  
+  // Wadah data kerja (Immortal Session)
+  data?: {
+    topic: string;
+    format: string;
+    blueprint?: Partial<ContentIdea> | null;
+    persona?: Persona | null;
+    step: string;
+  };
 }
 
 export enum WorkflowStep {
