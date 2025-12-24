@@ -8,22 +8,23 @@ import {
   buildImagePrompt, 
   buildEnhancePrompt,
   buildSSMLPrompt,
-  buildVisualPromptsPrompt // <-- TAMBAHKAN INI (YANG TADI HILANG)
+  buildVisualPromptsPrompt,
+  buildPackagingPrompt // <-- IMPORT BARU
 } from "./promptTemplates";
 
-// ... (kode konfigurasi getGenAIModel SAMA) ...
-
+// --- CONFIG ---
 const getGenAIModel = () => {
   const apiKey = storageService.getGeminiKey();
-  if (!apiKey) throw new Error("API Key Gemini belum diatur.");
+  if (!apiKey) throw new Error("API Key Gemini belum diatur. Silakan ke menu Pengaturan.");
   const savedModel = localStorage.getItem('health_creator_gemini_model') || "gemini-2.5-flash";
   const genAI = new GoogleGenerativeAI(apiKey);
   return genAI.getGenerativeModel({ model: savedModel });
 };
 
-// ... (kode fungsi suggestNicheTopics SAMA) ...
+// --- SERVICES ---
+
+// 1. IDEATION
 export const suggestNicheTopics = async (niche: string, targetAge: string, language: string, useWebSearch: boolean) => {
-  // ... (isi fungsi sama)
   try {
     const model = getGenAIModel();
     const prompt = `Generate 5 viral video topic ideas for a health channel about "${niche}" targeting "${targetAge}". Language: ${language}. Return strictly a JSON array without markdown formatting: [{"topic": "...", "angle": "..."}]`;
@@ -35,7 +36,7 @@ export const suggestNicheTopics = async (niche: string, targetAge: string, langu
   }
 };
 
-// ... (kode fungsi generateOutline SAMA) ...
+// 2. OUTLINING
 export const generateOutline = async (topic: string, age: string, niche: string, lang: string, duration: VideoDuration) => {
   try {
     const model = getGenAIModel();
@@ -48,8 +49,15 @@ export const generateOutline = async (topic: string, age: string, niche: string,
   }
 };
 
-// ... (kode fungsi generateScriptSegment SAMA) ...
-export const generateScriptSegment = async (topic: string, section: OutlineSection, persona: Persona, age: string, lang: string, doctorName: string) => {
+// 3. DRAFTING
+export const generateScriptSegment = async (
+  topic: string, 
+  section: OutlineSection, 
+  persona: Persona, 
+  age: string, 
+  lang: string, 
+  doctorName: string 
+) => {
   try {
     const model = getGenAIModel();
     const prompt = buildDraftingPrompt(topic, section, persona, age, lang, doctorName);
@@ -62,7 +70,7 @@ export const generateScriptSegment = async (topic: string, section: OutlineSecti
   }
 };
 
-// ... (kode fungsi generateWeeklyPlan SAMA) ...
+// 4. WEEKLY PLANNER
 export const generateWeeklyPlan = async (niche: string, targetAge: string, language: string = 'id', focusFormat?: string) => {
   try {
     const model = getGenAIModel();
@@ -75,7 +83,7 @@ export const generateWeeklyPlan = async (niche: string, targetAge: string, langu
   }
 };
 
-// ... (kode fungsi generateImagePrompt SAMA) ...
+// 5. IMAGE PROMPT
 export const generateImagePrompt = async (doctor: any, topic: string, hook: string) => {
   try {
     const model = getGenAIModel();
@@ -87,7 +95,7 @@ export const generateImagePrompt = async (doctor: any, topic: string, hook: stri
   }
 };
 
-// ... (kode fungsi enhanceDoctorProfile SAMA) ...
+// 6. MAGIC ENHANCE
 export const enhanceDoctorProfile = async (simpleDescription: string) => {
   try {
     const model = getGenAIModel();
@@ -99,7 +107,7 @@ export const enhanceDoctorProfile = async (simpleDescription: string) => {
   }
 };
 
-// ... (kode fungsi generateSSMLInstructions SAMA) ...
+// 7. VOCAL DIRECTOR SCRIPT
 export const generateSSMLInstructions = async (fullScript: string, voiceStyle: string) => {
   try {
     const model = getGenAIModel();
@@ -111,32 +119,32 @@ export const generateSSMLInstructions = async (fullScript: string, voiceStyle: s
   }
 };
 
-// --- FUNGSI BARU (YANG TADI ERROR) ---
+// 8. VISUAL DIRECTOR (STORYBOARD)
 export const generateVisualPrompts = async (fullScript: string) => {
-  console.log("🚀 Mengirim naskah ke AI Visual Director..."); 
-  
   try {
     const model = getGenAIModel();
-    // SEKARANG FUNGSI INI SUDAH DI-IMPORT
     const prompt = buildVisualPromptsPrompt(fullScript);
+    const result = await model.generateContent(prompt);
+    const cleanJson = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(cleanJson);
+  } catch (error: any) {
+    throw new Error(error.message || "Gagal menghubungi AI Visual.");
+  }
+};
+
+// 9. PACKAGING (JUDUL & THUMBNAIL) - FUNGSI BARU
+export const generatePackaging = async (topic: string, fullScript: string, targetAge: string) => {
+  try {
+    const model = getGenAIModel();
+    // Panggil prompt packaging
+    const prompt = buildPackagingPrompt(topic, fullScript, targetAge);
     
     const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    
-    console.log("📦 Respon Mentah AI:", text); 
-
-    const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    
-    try {
-      const parsed = JSON.parse(cleanJson);
-      return parsed;
-    } catch (jsonError) {
-      console.error("❌ Gagal Parsing JSON:", jsonError);
-      throw new Error("AI membalas dengan format yang salah.");
-    }
-
-  } catch (error: any) {
-    console.error("❌ Error Service:", error);
-    throw new Error(error.message || "Gagal menghubungi AI Visual.");
+    const cleanJson = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(cleanJson);
+  } catch (error) {
+    console.error("Packaging Error:", error);
+    // Return null biar UI bisa handle error dengan elegan
+    return null;
   }
 };

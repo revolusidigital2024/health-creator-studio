@@ -215,3 +215,46 @@ export const buildVisualPromptsPrompt = (fullScript: string) => {
     ]
   `;
 };
+
+// 8. PACKAGING PROMPT (HIGH CTR EDITION)
+export const buildPackagingPrompt = (topic: string, fullScript: string, targetAge: string) => {
+  return `
+    Act as a World-Class YouTube Strategist & SEO Expert.
+    Your goal is to maximize CTR (Click Through Rate) for a health video.
+    
+    Context:
+    - Topic: "${topic}"
+    - Audience: "${targetAge}"
+    - Script Summary: "${fullScript.slice(0, 500)}..."
+    
+    TASK 1: VIRAL TITLES (Indonesian)
+    Create 5 variations using psychological hooks.
+    **CONSTRAINT:** Each title MUST be under 100 characters.
+    
+    TASK 2: SEO DESCRIPTION (Indonesian)
+    Write a compelling video description (100-150 words) including strong hook & 15 hashtags.
+    
+    TASK 3: SEO TAGS
+    List 20 comma-separated keywords (Max 500 chars total).
+    
+    TASK 4: THUMBNAIL STRATEGY (2 High-CTR Options)
+    For each option, provide:
+    - **Visual Concept:** Describe the scene.
+    - **Overlay Text:** Short, punchy text (Max 3-4 words). **MUST BE CLICKBAIT/PROVOCATIVE.** 
+      - BAD: "Mitos vs Fakta" (Too boring)
+      - GOOD: "JANGAN LAKUKAN!", "AWAS BUTA!", "STOP SEKARANG!", "FAKTA MENGERIKAN"
+    - **Image Prompt:** Midjourney prompt (English).
+    
+    OUTPUT JSON FORMAT ONLY:
+    {
+      "titles": ["Title 1", ...],
+      "description": "...",
+      "hashtags": ["#tag1", ...],
+      "tags": "tag1, tag2...",
+      "thumbnails": [
+        { "concept": "...", "text": "...", "prompt": "..." },
+        { "concept": "...", "text": "...", "prompt": "..." }
+      ]
+    }
+  `;
+};

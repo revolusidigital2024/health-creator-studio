@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Project, Channel, Language } from '../types';
+import { Project, Channel } from '../types';
 import { 
   Video, Calendar, Filter, Plus, TrendingUp, Search, 
-  ArrowLeft, LayoutGrid, List, MoreHorizontal, Clock, Edit
+  ArrowLeft, LayoutGrid, List, MoreHorizontal, Clock, Edit, CheckCircle2
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -14,35 +14,41 @@ interface ProjectDashboardProps {
   onManageProject: (project: Project) => void;
 }
 
-// --- LOGIC: KALKULATOR SKOR KUALITAS ---
+// --- LOGIC: KALKULATOR SKOR KUALITAS (REVISI FINAL) ---
 const calculateQualityScore = (project: Project) => {
   let score = 0;
   if (!project.data) return 0;
 
-  // 1. Judul & Konsep (20 Poin)
-  if (project.title && project.data.topic) score += 20;
+  // 1. Judul & Konsep (10%)
+  if (project.title && project.data.topic) score += 10;
 
-  // 2. Naskah Lengkap (30 Poin)
+  // 2. Naskah Lengkap (30%)
   const outline = project.data.blueprint?.outline || [];
   const segmentsFilled = outline.filter((s: any) => s.scriptSegment && s.scriptSegment.length > 50).length;
   
   if (outline.length > 0 && segmentsFilled === outline.length) {
-    score += 30; // Full
+    score += 30; // Full Naskah
   } else if (segmentsFilled > 0) {
     score += 15; // Setengah jalan
   }
 
-  // 3. Visual Ready (25 Poin)
+  // 3. Visual Ready (20%)
   if (project.data.blueprint?.visualScenes && project.data.blueprint.visualScenes.length > 0) {
-    score += 25;
+    score += 20;
   }
 
-  // 4. Audio Ready / SSML (25 Poin)
+  // 4. Audio Ready / SSML (20%)
   if (project.data.blueprint?.ssmlScript) {
-    score += 25;
+    score += 20;
   }
 
-  return score;
+  // 5. PACKAGING READY (20%) - INI YANG BARU
+  if (project.data.blueprint?.packaging) {
+    score += 20;
+  }
+
+  // Batasi max 100 (jaga-jaga)
+  return Math.min(score, 100);
 };
 
 export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ 
@@ -212,9 +218,16 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                              <div className="flex items-center gap-2 mt-1.5 text-[10px] text-slate-400 font-bold"><Calendar size={12} /> <span>Diperbarui: {project.updatedAt}</span></div>
                            </td>
                            <td className="px-8 py-6">
-                              <span className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide border", project.status === 'Published' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : project.status === 'Drafting' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-amber-50 text-amber-700 border-amber-100')}>
-                                <span className={cn("w-1.5 h-1.5 rounded-full", project.status === 'Published' ? 'bg-emerald-500' : project.status === 'Drafting' ? 'bg-blue-500' : 'bg-amber-500')} />
-                                {project.status === 'Idea' ? 'Ide' : project.status}
+                              <span className={cn(
+                                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide border", 
+                                project.status === 'Published' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 
+                                project.status === 'Drafting' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-amber-50 text-amber-700 border-amber-100'
+                              )}>
+                                <span className={cn("w-1.5 h-1.5 rounded-full", 
+                                  project.status === 'Published' ? 'bg-emerald-500' : 
+                                  project.status === 'Drafting' ? 'bg-blue-500' : 'bg-amber-500'
+                                )} />
+                                {project.status === 'Idea' ? 'Ide' : project.status === 'Drafting' ? 'Draf' : 'Tayang'}
                               </span>
                            </td>
                            <td className="px-8 py-6">
@@ -222,7 +235,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                  <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
                                     <div 
                                       className={cn("h-full rounded-full transition-all duration-500", 
-                                        score >= 90 ? "bg-emerald-500" : 
+                                        score >= 100 ? "bg-emerald-500" : 
                                         score >= 50 ? "bg-amber-500" : "bg-red-500"
                                       )} 
                                       style={{ width: `${score}%` }} 
@@ -250,7 +263,9 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
            {Object.entries(columns).map(([status, items]) => (
              <div key={status} className="flex flex-col gap-4">
                 <div className="flex items-center justify-between px-2">
-                   <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">{status === 'Idea' ? 'Ide Mentah' : status === 'Drafting' ? 'Penulisan' : status === 'Editing' ? 'Produksi' : 'Tayang'}</h3>
+                   <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">
+                     {status === 'Idea' ? 'Ide Mentah' : status === 'Drafting' ? 'Penulisan' : status === 'Editing' ? 'Produksi' : 'Siap Tayang'}
+                   </h3>
                    <span className="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">{items.length}</span>
                 </div>
                 <div className="space-y-3">
@@ -258,13 +273,13 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                    {items.map(project => (
                      <div key={project.id} onClick={() => onManageProject(project)} className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md hover:border-emerald-300 cursor-pointer transition-all group">
                         <div className="flex justify-between items-start mb-3">
-                           <span className={cn("w-2 h-2 rounded-full", status === 'Published' ? 'bg-emerald-500' : status === 'Drafting' ? 'bg-blue-500' : 'bg-amber-500')} />
+                           <span className={cn("w-2 h-2 rounded-full", project.status === 'Published' ? 'bg-emerald-500' : project.status === 'Drafting' ? 'bg-blue-500' : 'bg-amber-500')} />
                            <button className="text-slate-300 hover:text-slate-600"><MoreHorizontal size={16} /></button>
                         </div>
                         <h4 className="font-bold text-slate-800 leading-snug mb-3 line-clamp-2 group-hover:text-emerald-700 transition-colors">{project.title}</h4>
                         <div className="flex items-center justify-between pt-3 border-t border-slate-50 text-[10px] font-bold text-slate-400">
                            <span className="flex items-center gap-1"><Calendar size={10}/> {project.updatedAt}</span>
-                           <span className="text-emerald-600">{calculateQualityScore(project)}%</span>
+                           <span className={cn(calculateQualityScore(project) >= 100 ? "text-emerald-600" : "text-slate-400")}>{calculateQualityScore(project)}%</span>
                         </div>
                      </div>
                    ))}

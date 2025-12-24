@@ -5,11 +5,10 @@ import { ProjectDashboard } from './components/ProjectDashboard';
 import { ContentWorkflow } from './components/ContentWorkflow';
 import { ChannelHub } from './components/ChannelHub';
 import { Settings } from './components/Settings';
-import { Channel, Project, ViewState, WorkflowStep } from './types'; // Import WorkflowStep
+import { Channel, Project, ViewState, WorkflowStep } from './types'; 
 import { storageService } from './services/storageService';
 
 const App: React.FC = () => {
-  // --- STATE MANAGEMENT ---
   const [currentView, setCurrentView] = useState<ViewState>(ViewState.CHANNEL_HUB);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -17,13 +16,11 @@ const App: React.FC = () => {
   
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
-  // --- INITIAL LOAD ---
   useEffect(() => {
     setChannels(storageService.getChannels());
     setProjects(storageService.getProjects());
   }, []);
 
-  // --- DERIVED STATE ---
   const activeChannel = useMemo(() => 
     channels.find(c => c.id === activeChannelId) || null, 
     [channels, activeChannelId]
@@ -33,8 +30,6 @@ const App: React.FC = () => {
     projects.filter(p => p.channelId === activeChannelId),
     [projects, activeChannelId]
   );
-
-  // --- HANDLERS ---
 
   const handleSaveChannel = (channelData: Channel) => {
     const existingIndex = channels.findIndex(c => c.id === channelData.id);
@@ -70,34 +65,33 @@ const App: React.FC = () => {
     window.location.reload();
   };
 
-  // --- LOGIC SAVE PROJECT (DIPERBAIKI) ---
+  // --- LOGIC STATUS UPDATE (DIPERBAIKI) ---
   const handleSaveProject = (projectData: any) => {
     if (!activeChannelId) return;
 
     const timestamp = new Date().toLocaleDateString();
     
-    // TENTUKAN STATUS BERDASARKAN STEP TERAKHIR
     let newStatus: 'Idea' | 'Drafting' | 'Published' = 'Drafting';
     
-    if (projectData.step === WorkflowStep.EXPORT) {
-      newStatus = 'Published'; // Kalau sudah sampai Export, berarti SELESAI
+    // Logic Baru: Hanya PUBLISHED jika step == PUBLISH
+    if (projectData.step === WorkflowStep.PUBLISH) {
+      newStatus = 'Published'; 
     } else if (projectData.step === WorkflowStep.IDEATION) {
       newStatus = 'Idea';
     } else {
-      newStatus = 'Drafting'; // Outline, Persona, Visuals, SSML masuk sini
+      newStatus = 'Drafting'; 
     }
 
     let updatedProjects = [...projects];
 
     if (editingProject) {
-      // UPDATE
       updatedProjects = projects.map(p => 
         p.id === editingProject.id 
           ? { 
               ...p, 
               title: projectData.title, 
               updatedAt: timestamp, 
-              status: newStatus, // Status dinamis
+              status: newStatus,
               data: projectData 
             } 
           : p
@@ -109,12 +103,11 @@ const App: React.FC = () => {
          data: projectData
       });
     } else {
-      // NEW
       const newProject: Project = {
         id: Date.now().toString(),
         channelId: activeChannelId,
         title: projectData.title,
-        status: 'Idea', // Default awal selalu Idea
+        status: 'Idea',
         updatedAt: timestamp,
         data: projectData
       };
@@ -141,7 +134,6 @@ const App: React.FC = () => {
     setCurrentView(ViewState.CHANNEL_HUB);
   };
 
-  // --- VIEW ROUTING ---
   const renderView = () => {
     switch (currentView) {
       case ViewState.CHANNEL_HUB:
@@ -204,7 +196,6 @@ const App: React.FC = () => {
     }
   };
 
-  // --- RENDER UTAMA ---
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
       {currentView !== ViewState.CHANNEL_HUB && (

@@ -38,10 +38,18 @@ export interface Persona {
   bestFor?: string[];
 }
 
-// Tipe data untuk Visual Scene
 export interface VisualScene {
   scene_text: string;
   image_prompt: string;
+}
+
+// DEFINISI DATA PACKAGING (BARU)
+export interface PackagingData {
+  titles: string[];
+  description: string;
+  hashtags: string[];
+  tags: string;
+  thumbnails: { concept: string; text: string; prompt: string }[];
 }
 
 export interface ContentIdea {
@@ -53,7 +61,8 @@ export interface ContentIdea {
   audioCues: string;
   persona?: Persona;
   ssmlScript?: string;
-  visualScenes?: VisualScene[]; // <-- TAMBAHAN: Tempat nyimpen storyboard
+  visualScenes?: VisualScene[];
+  packaging?: PackagingData; // <-- WADAH BARU DI SINI
 }
 
 export interface Project {
@@ -87,7 +96,8 @@ export enum WorkflowStep {
   FINAL = 'FINAL',
   VISUALS = 'VISUALS',
   SSML = 'SSML',
-  EXPORT = 'EXPORT'
+  EXPORT = 'EXPORT',
+  PUBLISH = 'PUBLISH'
 }
 
 export enum ViewState {

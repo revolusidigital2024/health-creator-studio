@@ -16,6 +16,7 @@ import { StepDrafting } from './workflow/StepDrafting';
 import { StepVisuals } from './workflow/StepVisuals'; 
 import { StepSSML } from './workflow/StepSSML'; 
 import { StepExport } from './workflow/StepExport';
+import { StepPublish } from './workflow/StepPublish'; // Import Step Publish
 
 interface ContentWorkflowProps {
   channel: Channel;
@@ -54,6 +55,7 @@ export const ContentWorkflow: React.FC<ContentWorkflowProps> = ({
       setBlueprint(d.blueprint || null);
       setSelectedPersona(d.persona || null);
       if (d.step) setStep(d.step as WorkflowStep);
+      else setStep(WorkflowStep.IDEATION); // Default fallback
       localStorage.removeItem(SESSION_KEY);
     } else {
       const savedSession = localStorage.getItem(SESSION_KEY);
@@ -75,18 +77,21 @@ export const ContentWorkflow: React.FC<ContentWorkflowProps> = ({
     localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
   }, [step, topic, selectedFormat, blueprint, selectedPersona]); 
 
-  // --- HELPER SAVE (UPDATED: Handle Extra Data) ---
+  // --- HELPER SAVE (UPDATED UNTUK PACKAGING) ---
   const saveWork = (currentStep: WorkflowStep, extraData?: any) => {
-    // Clone blueprint biar aman
     let updatedBlueprint = { ...blueprint };
 
-    // Kalau ada update naskah SSML (string)
+    // Update SSML
     if (extraData && typeof extraData === 'string') {
         updatedBlueprint.ssmlScript = extraData;
     }
-    // Kalau ada update Visual Scenes (Array)
-    if (extraData && Array.isArray(extraData)) {
+    // Update Visuals
+    else if (extraData && Array.isArray(extraData)) {
         updatedBlueprint.visualScenes = extraData;
+    }
+    // Update Packaging (Objek biasa, bukan array)
+    else if (extraData && typeof extraData === 'object' && !Array.isArray(extraData)) {
+        updatedBlueprint.packaging = extraData;
     }
 
     const projectData = {
@@ -98,19 +103,13 @@ export const ContentWorkflow: React.FC<ContentWorkflowProps> = ({
       step: currentStep
     };
     onSaveProject(projectData);
-    
-    // Update local state juga biar UI gak nge-glitch
     setBlueprint(updatedBlueprint);
   };
 
-  const handleClearSession = () => {
-    localStorage.removeItem(SESSION_KEY);
-  };
-
+  const handleClearSession = () => { localStorage.removeItem(SESSION_KEY); };
   const currentFormat = VIDEO_FORMATS.find(f => f.id === selectedFormat) || VIDEO_FORMATS[1];
   const getModelDisplayName = () => { if (engine === 'groq') return 'Groq LPU™'; const savedModel = localStorage.getItem('health_creator_gemini_model') as GeminiModelId; if (savedModel === 'gemini-2.5-pro') return 'Gemini 2.5 Pro'; return 'Gemini 2.5 Flash'; };
 
-  // --- LOGIC: AI GENERATION ---
   const startBlueprint = async (topicOverride?: string) => {
     const finalTopic = topicOverride || topic;
     const promptTopic = `[Format: ${currentFormat.label}] ${finalTopic}`;
@@ -136,7 +135,6 @@ export const ContentWorkflow: React.FC<ContentWorkflowProps> = ({
     try {
       const doctorName = channel.doctorProfile?.name || "Dokter";
       const segment = await generateScriptSegment(topic, blueprint.outline[idx], selectedPersona, channel.targetAge, language, doctorName);
-      
       const newOutline = [...blueprint.outline];
       newOutline[idx].scriptSegment = segment;
       const newBlueprint = { ...blueprint, outline: newOutline };
@@ -145,12 +143,12 @@ export const ContentWorkflow: React.FC<ContentWorkflowProps> = ({
     } catch (e: any) { alert(`Gagal menulis: ${e.message}.`); } finally { setDraftingIdx(null); }
   };
 
-  // --- LOGIC: NAVIGATION & FINAL SAVE ---
   const handleSmartBack = () => {
     switch (step) {
+      case WorkflowStep.PUBLISH: setStep(WorkflowStep.EXPORT); break;
       case WorkflowStep.EXPORT: setStep(WorkflowStep.SSML); break;
-      case WorkflowStep.SSML: setStep(WorkflowStep.VISUALS); break; // Back ke Visuals
-      case WorkflowStep.VISUALS: setStep(WorkflowStep.FINAL); break; // Back ke Final
+      case WorkflowStep.SSML: setStep(WorkflowStep.VISUALS); break; 
+      case WorkflowStep.VISUALS: setStep(WorkflowStep.FINAL); break; 
       case WorkflowStep.FINAL: setStep(WorkflowStep.DRAFTING); break;
       case WorkflowStep.DRAFTING: setStep(WorkflowStep.PERSONA); break;
       case WorkflowStep.PERSONA: setStep(WorkflowStep.OUTLINING); break;
@@ -160,13 +158,12 @@ export const ContentWorkflow: React.FC<ContentWorkflowProps> = ({
   };
 
   const handleFinalSaveAndExit = () => {
-    saveWork(WorkflowStep.EXPORT);
+    saveWork(WorkflowStep.PUBLISH); // Simpan posisi di PUBLISH (Tamat)
     if (!initialData) handleClearSession();
-    alert('Proyek berhasil disimpan!');
+    alert('Proyek SELESAI & disimpan! Siap Upload.');
     onBack();
   };
 
-  // --- RENDER UTAMA ---
   return (
     <div className="max-w-6xl mx-auto pb-32 animate-in fade-in slide-in-from-bottom-8 duration-700 px-6 relative">
       {isRestored && !initialData && (
@@ -209,32 +206,18 @@ export const ContentWorkflow: React.FC<ContentWorkflowProps> = ({
           blueprint={blueprint} selectedPersona={selectedPersona}
           step={step} draftingIdx={draftingIdx}
           onGenerateSegment={generateSegment}
-          onFinalize={() => {
-             setStep(WorkflowStep.FINAL); 
-             saveWork(WorkflowStep.FINAL);
-          }}
-          // DI SINI PERUBAHANNYA: Lanjut ke VISUALS, bukan SSML
-          onSave={step === WorkflowStep.FINAL ? () => { 
-             setStep(WorkflowStep.VISUALS); 
-             saveWork(WorkflowStep.VISUALS);
-          } : () => {}}
+          onFinalize={() => { setStep(WorkflowStep.FINAL); saveWork(WorkflowStep.FINAL); }}
+          onSave={step === WorkflowStep.FINAL ? () => { setStep(WorkflowStep.VISUALS); saveWork(WorkflowStep.VISUALS); } : () => {}}
           onPrint={() => window.print()}
         />
       )}
 
-      {/* RENDER STEP VISUALS (UPDATED SAVE LOGIC) */}
       {step === WorkflowStep.VISUALS && blueprint && (
         <StepVisuals
           blueprint={blueprint}
           onBack={() => setStep(WorkflowStep.FINAL)}
-          onNext={() => {
-            setStep(WorkflowStep.SSML);
-            saveWork(WorkflowStep.SSML);
-          }}
-          // Simpan data visual saat generate selesai
-          onSaveData={(scenes) => {
-             saveWork(WorkflowStep.VISUALS, scenes);
-          }}
+          onNext={() => { setStep(WorkflowStep.SSML); saveWork(WorkflowStep.SSML); }}
+          onSaveData={(scenes) => saveWork(WorkflowStep.VISUALS, scenes)}
         />
       )}
 
@@ -243,14 +226,8 @@ export const ContentWorkflow: React.FC<ContentWorkflowProps> = ({
           blueprint={blueprint}
           selectedPersona={selectedPersona}
           onBack={() => setStep(WorkflowStep.VISUALS)} 
-          onNext={() => {
-             setStep(WorkflowStep.EXPORT); 
-             saveWork(WorkflowStep.EXPORT);
-          }}
-          // Simpan data SSML saat analisis selesai
-          onAnalysisComplete={(script) => {
-             saveWork(WorkflowStep.SSML, script);
-          }}
+          onNext={() => { setStep(WorkflowStep.EXPORT); saveWork(WorkflowStep.EXPORT); }}
+          onAnalysisComplete={(script) => { saveWork(WorkflowStep.SSML, script); }}
         />
       )}
       
@@ -259,7 +236,18 @@ export const ContentWorkflow: React.FC<ContentWorkflowProps> = ({
           blueprint={blueprint}
           selectedPersona={selectedPersona}
           onBack={() => setStep(WorkflowStep.SSML)}
+          onFinish={() => { setStep(WorkflowStep.PUBLISH); saveWork(WorkflowStep.PUBLISH); }} // Pindah ke PUBLISH
+        />
+      )}
+
+      {/* RENDER STEP TERAKHIR */}
+      {step === WorkflowStep.PUBLISH && blueprint && (
+        <StepPublish 
+          blueprint={blueprint}
+          targetAge={channel.targetAge}
+          onBack={() => setStep(WorkflowStep.EXPORT)}
           onFinish={handleFinalSaveAndExit}
+          onSaveData={(data) => saveWork(WorkflowStep.PUBLISH, data)} // Simpan data packaging
         />
       )}
     </div>
