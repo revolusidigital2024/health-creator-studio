@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Project, Channel, Language } from '../types';
 import { 
   Video, Calendar, Filter, Plus, TrendingUp, Search, 
@@ -11,9 +11,39 @@ interface ProjectDashboardProps {
   projects: Project[];
   onCreateNew: () => void;
   onBack: () => void;
-  // TAMBAHAN: Prop buat handle klik Manage
   onManageProject: (project: Project) => void;
 }
+
+// --- LOGIC: KALKULATOR SKOR KUALITAS ---
+const calculateQualityScore = (project: Project) => {
+  let score = 0;
+  if (!project.data) return 0;
+
+  // 1. Judul & Konsep (20 Poin)
+  if (project.title && project.data.topic) score += 20;
+
+  // 2. Naskah Lengkap (30 Poin)
+  const outline = project.data.blueprint?.outline || [];
+  const segmentsFilled = outline.filter((s: any) => s.scriptSegment && s.scriptSegment.length > 50).length;
+  
+  if (outline.length > 0 && segmentsFilled === outline.length) {
+    score += 30; // Full
+  } else if (segmentsFilled > 0) {
+    score += 15; // Setengah jalan
+  }
+
+  // 3. Visual Ready (25 Poin)
+  if (project.data.blueprint?.visualScenes && project.data.blueprint.visualScenes.length > 0) {
+    score += 25;
+  }
+
+  // 4. Audio Ready / SSML (25 Poin)
+  if (project.data.blueprint?.ssmlScript) {
+    score += 25;
+  }
+
+  return score;
+};
 
 export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ 
   channel, projects, onCreateNew, onBack, onManageProject 
@@ -37,6 +67,13 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
   });
+
+  // --- LOGIC: HITUNG SKOR OTORITAS CHANNEL ---
+  const authorityScore = useMemo(() => {
+    if (projects.length === 0) return 0;
+    const totalScore = projects.reduce((acc, p) => acc + calculateQualityScore(p), 0);
+    return Math.round(totalScore / projects.length);
+  }, [projects]);
 
   // --- HELPER: KANBAN COLUMNS ---
   const columns = {
@@ -90,13 +127,13 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         </div>
       </div>
 
-      {/* STATS */}
+      {/* STATS REAL-TIME */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-[2rem] text-white relative overflow-hidden flex items-center justify-between shadow-lg">
              <div>
                 <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest mb-1">Skor Otoritas</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-black">84</span>
+                  <span className="text-4xl font-black">{authorityScore}</span>
                   <span className="text-slate-400 text-xs">/100</span>
                 </div>
              </div>
@@ -166,35 +203,42 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                      </tr>
                    </thead>
                    <tbody className="divide-y divide-slate-50">
-                     {filteredProjects.map((project) => (
-                       <tr key={project.id} className="hover:bg-slate-50 transition-colors group cursor-default">
-                         <td className="px-8 py-6">
-                           <div className="font-bold text-base text-slate-800 group-hover:text-emerald-700 transition-colors line-clamp-1">{project.title}</div>
-                           <div className="flex items-center gap-2 mt-1.5 text-[10px] text-slate-400 font-bold"><Calendar size={12} /> <span>Diperbarui: {project.updatedAt}</span></div>
-                         </td>
-                         <td className="px-8 py-6">
-                            <span className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide border", project.status === 'Published' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : project.status === 'Drafting' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-amber-50 text-amber-700 border-amber-100')}>
-                              <span className={cn("w-1.5 h-1.5 rounded-full", project.status === 'Published' ? 'bg-emerald-500' : project.status === 'Drafting' ? 'bg-blue-500' : 'bg-amber-500')} />
-                              {project.status === 'Idea' ? 'Ide' : project.status}
-                            </span>
-                         </td>
-                         <td className="px-8 py-6">
-                            <div className="flex items-center gap-3">
-                               <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: '85%' }} /></div>
-                               <span className="text-xs font-black text-slate-700">85</span>
-                            </div>
-                         </td>
-                         <td className="px-8 py-6 text-right">
-                           {/* TOMBOL MANAGE YANG SUDAH DIPERBAIKI */}
-                           <button 
-                             onClick={() => onManageProject(project)}
-                             className="text-slate-400 hover:text-emerald-600 hover:bg-white border border-transparent hover:border-emerald-200 hover:shadow-sm font-bold text-[10px] uppercase tracking-wider transition-all px-4 py-2 rounded-xl flex items-center gap-2 ml-auto"
-                           >
-                             <Edit size={14} /> Kelola
-                           </button>
-                         </td>
-                       </tr>
-                     ))}
+                     {filteredProjects.map((project) => {
+                       const score = calculateQualityScore(project);
+                       return (
+                         <tr key={project.id} className="hover:bg-slate-50 transition-colors group cursor-default">
+                           <td className="px-8 py-6">
+                             <div className="font-bold text-base text-slate-800 group-hover:text-emerald-700 transition-colors line-clamp-1">{project.title}</div>
+                             <div className="flex items-center gap-2 mt-1.5 text-[10px] text-slate-400 font-bold"><Calendar size={12} /> <span>Diperbarui: {project.updatedAt}</span></div>
+                           </td>
+                           <td className="px-8 py-6">
+                              <span className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide border", project.status === 'Published' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : project.status === 'Drafting' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-amber-50 text-amber-700 border-amber-100')}>
+                                <span className={cn("w-1.5 h-1.5 rounded-full", project.status === 'Published' ? 'bg-emerald-500' : project.status === 'Drafting' ? 'bg-blue-500' : 'bg-amber-500')} />
+                                {project.status === 'Idea' ? 'Ide' : project.status}
+                              </span>
+                           </td>
+                           <td className="px-8 py-6">
+                              <div className="flex items-center gap-3">
+                                 <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                    <div 
+                                      className={cn("h-full rounded-full transition-all duration-500", 
+                                        score >= 90 ? "bg-emerald-500" : 
+                                        score >= 50 ? "bg-amber-500" : "bg-red-500"
+                                      )} 
+                                      style={{ width: `${score}%` }} 
+                                    />
+                                 </div>
+                                 <span className="text-xs font-black text-slate-700">{score}</span>
+                              </div>
+                           </td>
+                           <td className="px-8 py-6 text-right">
+                             <button onClick={() => onManageProject(project)} className="text-slate-400 hover:text-emerald-600 hover:bg-white border border-transparent hover:border-emerald-200 hover:shadow-sm font-bold text-[10px] uppercase tracking-wider transition-all px-4 py-2 rounded-xl flex items-center gap-2 ml-auto">
+                               <Edit size={14} /> Kelola
+                             </button>
+                           </td>
+                         </tr>
+                       );
+                     })}
                    </tbody>
                  </table>
                </div>
@@ -220,6 +264,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                         <h4 className="font-bold text-slate-800 leading-snug mb-3 line-clamp-2 group-hover:text-emerald-700 transition-colors">{project.title}</h4>
                         <div className="flex items-center justify-between pt-3 border-t border-slate-50 text-[10px] font-bold text-slate-400">
                            <span className="flex items-center gap-1"><Calendar size={10}/> {project.updatedAt}</span>
+                           <span className="text-emerald-600">{calculateQualityScore(project)}%</span>
                         </div>
                      </div>
                    ))}

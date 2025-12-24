@@ -1,11 +1,8 @@
 export type AgeGroup = 'Kids' | 'Teens' | 'Adults' | 'Seniors';
 export type Language = 'en' | 'id';
 export type VideoDuration = 'short' | 'standard' | 'long';
-
-// Model ID (Gemini 2.5)
 export type GeminiModelId = 'gemini-2.5-flash' | 'gemini-2.5-pro';
 
-// --- DEFINISI DOKTER (BARU) ---
 export interface DoctorProfile {
   name: string;
   gender: 'Male' | 'Female';
@@ -22,7 +19,6 @@ export interface Channel {
   targetAge: AgeGroup;
   description: string;
   createdAt: string;
-  // Field baru untuk nyimpen data dokter
   doctorProfile?: DoctorProfile; 
 }
 
@@ -39,6 +35,13 @@ export interface Persona {
   description: string;
   voiceStyle: string;
   icon?: string;
+  bestFor?: string[];
+}
+
+// Tipe data untuk Visual Scene
+export interface VisualScene {
+  scene_text: string;
+  image_prompt: string;
 }
 
 export interface ContentIdea {
@@ -49,6 +52,8 @@ export interface ContentIdea {
   thumbnailSuggestion: string;
   audioCues: string;
   persona?: Persona;
+  ssmlScript?: string;
+  visualScenes?: VisualScene[]; // <-- TAMBAHAN: Tempat nyimpen storyboard
 }
 
 export interface Project {
@@ -58,7 +63,6 @@ export interface Project {
   status: 'Idea' | 'Drafting' | 'Editing' | 'Published';
   updatedAt: string;
   
-  // Wadah data kerja (Immortal Session)
   data?: {
     topic: string;
     format: string;
@@ -68,12 +72,22 @@ export interface Project {
   };
 }
 
+export interface SSMLInstruction {
+  type: 'break' | 'emphasis' | 'pitch';
+  value: string;
+  startIndex: number;
+  endIndex: number;
+}
+
 export enum WorkflowStep {
   IDEATION = 'IDEATION',
   OUTLINING = 'OUTLINING',
   PERSONA = 'PERSONA',
   DRAFTING = 'DRAFTING',
-  FINAL = 'FINAL'
+  FINAL = 'FINAL',
+  VISUALS = 'VISUALS',
+  SSML = 'SSML',
+  EXPORT = 'EXPORT'
 }
 
 export enum ViewState {

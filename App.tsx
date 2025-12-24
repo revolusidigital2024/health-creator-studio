@@ -5,7 +5,7 @@ import { ProjectDashboard } from './components/ProjectDashboard';
 import { ContentWorkflow } from './components/ContentWorkflow';
 import { ChannelHub } from './components/ChannelHub';
 import { Settings } from './components/Settings';
-import { Channel, Project, ViewState } from './types';
+import { Channel, Project, ViewState, WorkflowStep } from './types'; // Import WorkflowStep
 import { storageService } from './services/storageService';
 
 const App: React.FC = () => {
@@ -15,7 +15,6 @@ const App: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   
-  // State untuk menyimpan proyek yang sedang diedit (Hydration Data)
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
   // --- INITIAL LOAD ---
@@ -37,27 +36,21 @@ const App: React.FC = () => {
 
   // --- HANDLERS ---
 
-  // 1. SAVE CHANNEL
   const handleSaveChannel = (channelData: Channel) => {
     const existingIndex = channels.findIndex(c => c.id === channelData.id);
     let updatedChannels;
-    
     if (existingIndex >= 0) {
-      // Edit Channel Lama
       updatedChannels = [...channels];
       updatedChannels[existingIndex] = { ...channelData, createdAt: channels[existingIndex].createdAt };
     } else {
-      // Buat Channel Baru
       updatedChannels = [{ ...channelData, createdAt: new Date().toISOString() }, ...channels];
     }
-    
     setChannels(updatedChannels);
     storageService.saveChannels(updatedChannels);
     setActiveChannelId(channelData.id);
     setCurrentView(ViewState.PROJECT_LIST);
   };
 
-  // 2. DELETE CHANNEL
   const handleDeleteChannel = (id: string) => {
     const updatedChannels = channels.filter(c => c.id !== id);
     const updatedProjects = projects.filter(p => p.channelId !== id);
@@ -72,51 +65,60 @@ const App: React.FC = () => {
     }
   };
 
-  // 3. RESET DATA (FACTORY RESET)
   const handleResetData = () => {
     localStorage.clear();
     window.location.reload();
   };
 
-  // 4. SAVE PROJECT (Handle New & Edit Logic)
+  // --- LOGIC SAVE PROJECT (DIPERBAIKI) ---
   const handleSaveProject = (projectData: any) => {
     if (!activeChannelId) return;
 
     const timestamp = new Date().toLocaleDateString();
+    
+    // TENTUKAN STATUS BERDASARKAN STEP TERAKHIR
+    let newStatus: 'Idea' | 'Drafting' | 'Published' = 'Drafting';
+    
+    if (projectData.step === WorkflowStep.EXPORT) {
+      newStatus = 'Published'; // Kalau sudah sampai Export, berarti SELESAI
+    } else if (projectData.step === WorkflowStep.IDEATION) {
+      newStatus = 'Idea';
+    } else {
+      newStatus = 'Drafting'; // Outline, Persona, Visuals, SSML masuk sini
+    }
+
     let updatedProjects = [...projects];
 
     if (editingProject) {
-      // UPDATE EXISTING PROJECT
+      // UPDATE
       updatedProjects = projects.map(p => 
         p.id === editingProject.id 
           ? { 
               ...p, 
               title: projectData.title, 
               updatedAt: timestamp, 
-              status: projectData.step === 'FINAL' ? 'Published' : 'Drafting',
-              data: projectData // Simpan isi otak AI
+              status: newStatus, // Status dinamis
+              data: projectData 
             } 
           : p
       );
-      // Update state editingProject agar sinkron
       setEditingProject({
          ...editingProject,
          title: projectData.title,
+         status: newStatus,
          data: projectData
       });
     } else {
-      // CREATE NEW PROJECT
+      // NEW
       const newProject: Project = {
         id: Date.now().toString(),
         channelId: activeChannelId,
         title: projectData.title,
-        status: 'Idea',
+        status: 'Idea', // Default awal selalu Idea
         updatedAt: timestamp,
         data: projectData
       };
       updatedProjects = [newProject, ...projects];
-      
-      // Set sebagai editing project supaya save berikutnya tidak membuat duplikat
       setEditingProject(newProject);
     }
 
@@ -124,13 +126,11 @@ const App: React.FC = () => {
     storageService.saveProjects(updatedProjects);
   };
 
-  // 5. MANAGE PROJECT (Load Data ke Studio)
   const handleManageProject = (project: Project) => {
-    setEditingProject(project); // Load data
-    setCurrentView(ViewState.CONTENT_WORKFLOW); // Buka studio
+    setEditingProject(project); 
+    setCurrentView(ViewState.CONTENT_WORKFLOW); 
   };
 
-  // 6. NAVIGATION HANDLERS
   const handleSelectChannel = (channel: Channel) => {
     setActiveChannelId(channel.id);
     setCurrentView(ViewState.PROJECT_LIST);
@@ -141,7 +141,7 @@ const App: React.FC = () => {
     setCurrentView(ViewState.CHANNEL_HUB);
   };
 
-  // --- ROUTING / RENDER VIEW ---
+  // --- VIEW ROUTING ---
   const renderView = () => {
     switch (currentView) {
       case ViewState.CHANNEL_HUB:
@@ -152,17 +152,13 @@ const App: React.FC = () => {
             onSelectChannel={handleSelectChannel} 
             onCreateNew={() => setCurrentView(ViewState.CHANNEL_SETUP)}
             onDeleteChannel={handleDeleteChannel}
-            // Prop 'language' sudah dihapus
           />
         );
-
       case ViewState.CHANNEL_SETUP:
         return (
           <ChannelSetup 
             channel={activeChannel} 
             onSave={handleSaveChannel}
-            // Logic Cancel: Kalau lagi edit channel (ada activeChannel), balik ke Project List.
-            // Kalau lagi bikin baru, balik ke Hub.
             onCancel={() => {
               if (activeChannelId) {
                 setCurrentView(ViewState.PROJECT_LIST);
@@ -170,55 +166,47 @@ const App: React.FC = () => {
                 setCurrentView(ViewState.CHANNEL_HUB);
               }
             }}
-            // Prop 'language' sudah dihapus
           />
         );
-
       case ViewState.PROJECT_LIST:
         return activeChannel && (
           <ProjectDashboard 
             channel={activeChannel} 
             projects={filteredProjects} 
             onCreateNew={() => {
-              setEditingProject(null); // Reset data untuk proyek baru
+              setEditingProject(null);
               setCurrentView(ViewState.CONTENT_WORKFLOW);
             }}
             onBack={() => {
               setActiveChannelId(null);
               setCurrentView(ViewState.CHANNEL_HUB);
             }}
-            onManageProject={handleManageProject} // Sambungkan tombol Kelola
-            // Prop 'language' sudah dihapus
+            onManageProject={handleManageProject}
           />
         );
-
       case ViewState.CONTENT_WORKFLOW:
         return activeChannel && (
           <ContentWorkflow 
             channel={activeChannel} 
             onSaveProject={handleSaveProject}
-            language="id" // String hardcode biar aman
+            language="id"
             onBack={() => {
-              setEditingProject(null); // Clear editing state saat keluar
+              setEditingProject(null); 
               setCurrentView(ViewState.PROJECT_LIST);
             }}
-            initialData={editingProject} // Kirim data proyek lama (jika ada)
+            initialData={editingProject} 
           />
         );
-
       case ViewState.SETTINGS:
-        return <Settings onResetData={handleResetData} />; // Prop 'language' sudah dihapus
-
+        return <Settings onResetData={handleResetData} />;
       default:
         return <div>Halaman tidak ditemukan</div>;
     }
   };
 
-  // --- MAIN RENDER ---
+  // --- RENDER UTAMA ---
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-      
-      {/* Sidebar */}
       {currentView !== ViewState.CHANNEL_HUB && (
         <Sidebar 
           currentView={currentView} 
@@ -227,8 +215,6 @@ const App: React.FC = () => {
           onSwitchChannel={handleSwitchChannel}
         />
       )}
-      
-      {/* Main Content Area */}
       <main 
         className={`flex-1 w-full min-h-screen transition-all duration-300 ease-in-out ${
           currentView === ViewState.CHANNEL_HUB ? 'ml-0 max-w-full' : 'ml-64'

@@ -8,7 +8,7 @@ interface Props {
   selectedPersona: Persona;
   step: WorkflowStep;
   draftingIdx: number | null;
-  onGenerateSegment: (idx: number) => void; // Fungsi generate per blok
+  onGenerateSegment: (idx: number) => void;
   onFinalize: () => void;
   onSave: () => void;
   onPrint: () => void;
@@ -30,6 +30,11 @@ export const StepDrafting: React.FC<Props> = ({
                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Persona Aktif</p>
                  <p className="font-bold text-slate-800 text-sm">{selectedPersona.name}</p>
               </div>
+              
+              {/* INDIKATOR AUTO SAVE */}
+              <div className="hidden md:flex items-center gap-1.5 text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
+                <CheckCircle2 size={10} /> Auto-Saved
+              </div>
            </div>
            
            {step === WorkflowStep.DRAFTING ? (
@@ -47,7 +52,7 @@ export const StepDrafting: React.FC<Props> = ({
            )}
         </div>
 
-        {/* KERTAS KERJA (Modular Blocks) */}
+        {/* KERTAS KERJA */}
         <div className="bg-white border border-slate-200 shadow-2xl rounded-sm min-h-[800px] p-12 md:p-16 font-serif text-lg leading-relaxed text-slate-800 relative">
            <div className="absolute top-0 right-0 left-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
            
@@ -78,8 +83,8 @@ export const StepDrafting: React.FC<Props> = ({
                            className={cn(
                              "text-[10px] font-bold uppercase tracking-widest py-2 px-4 rounded-lg flex items-center gap-2 transition-all border",
                              sec.scriptSegment 
-                               ? "bg-white text-slate-600 border-slate-200 hover:border-emerald-500 hover:text-emerald-600" // Kalau udah ada, mode edit/regen
-                               : "bg-slate-900 text-white border-transparent hover:bg-slate-800 shadow-md" // Kalau belum ada, tombol hitam mencolok
+                               ? "bg-white text-slate-600 border-slate-200 hover:border-emerald-500 hover:text-emerald-600" 
+                               : "bg-slate-900 text-white border-transparent hover:bg-slate-800 shadow-md"
                            )}
                          >
                             {draftingIdx === idx ? (
