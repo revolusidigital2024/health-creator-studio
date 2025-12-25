@@ -1,5 +1,4 @@
-
-import { Channel, Project, GeminiModelId } from '../types';
+import { Channel, Project } from '../types';
 
 const KEYS = {
   CHANNELS: 'health_creator_channels',
@@ -13,8 +12,12 @@ const KEYS = {
 export const storageService = {
   // --- Channels ---
   getChannels: (): Channel[] => {
-    const data = localStorage.getItem(KEYS.CHANNELS);
-    return data ? JSON.parse(data) : [];
+    try {
+      const data = localStorage.getItem(KEYS.CHANNELS);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      return [];
+    }
   },
   saveChannels: (channels: Channel[]) => {
     localStorage.setItem(KEYS.CHANNELS, JSON.stringify(channels));
@@ -22,36 +25,43 @@ export const storageService = {
 
   // --- Projects ---
   getProjects: (): Project[] => {
-    const data = localStorage.getItem(KEYS.PROJECTS);
-    return data ? JSON.parse(data) : [];
+    try {
+      const data = localStorage.getItem(KEYS.PROJECTS);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      return [];
+    }
   },
   saveProjects: (projects: Project[]) => {
     localStorage.setItem(KEYS.PROJECTS, JSON.stringify(projects));
   },
 
-  // --- API Keys & Config ---
+  // --- API Keys ---
   getGeminiKey: (): string | null => {
-    return localStorage.getItem(KEYS.GEMINI_KEY);
+    const key = localStorage.getItem(KEYS.GEMINI_KEY);
+    return key ? key.trim() : null;
   },
   saveGeminiKey: (key: string) => {
-    localStorage.setItem(KEYS.GEMINI_KEY, key);
-  },
-
-  getGeminiModel: (): GeminiModelId => {
-    // Fixed: Changed default value to 'gemini-3-flash' to match GeminiModelId type
-    return (localStorage.getItem(KEYS.GEMINI_MODEL) as GeminiModelId) || 'gemini-3-flash-preview';
-  },
-  saveGeminiModel: (model: GeminiModelId) => {
-    localStorage.setItem(KEYS.GEMINI_MODEL, model);
+    if (!key) {
+      localStorage.removeItem(KEYS.GEMINI_KEY);
+    } else {
+      localStorage.setItem(KEYS.GEMINI_KEY, key.trim());
+    }
   },
 
   getGroqKey: (): string | null => {
-    return localStorage.getItem(KEYS.GROQ_KEY);
+    const key = localStorage.getItem(KEYS.GROQ_KEY);
+    return key ? key.trim() : null;
   },
   saveGroqKey: (key: string) => {
-    localStorage.setItem(KEYS.GROQ_KEY, key);
+    if (!key) {
+      localStorage.removeItem(KEYS.GROQ_KEY);
+    } else {
+      localStorage.setItem(KEYS.GROQ_KEY, key.trim());
+    }
   },
   
+  // --- Preferences ---
   getSelectedEngine: (): string => {
     return localStorage.getItem(KEYS.SELECTED_ENGINE) || 'gemini';
   },
@@ -59,7 +69,16 @@ export const storageService = {
     localStorage.setItem(KEYS.SELECTED_ENGINE, engine);
   },
 
-  // --- BACKUP & RESTORE ---
+  // --- GEMINI MODEL (YANG TADI ERROR) ---
+  getGeminiModel: (): string => {
+    return localStorage.getItem(KEYS.GEMINI_MODEL) || 'gemini-3-flash-preview';
+  },
+  // FUNGSI INI YANG KURANG TADI 👇
+  saveGeminiModel: (model: string) => {
+    localStorage.setItem(KEYS.GEMINI_MODEL, model);
+  },
+
+  // --- FITUR BACKUP & RESTORE ---
   exportAllData: () => {
     const data = {
       channels: JSON.parse(localStorage.getItem(KEYS.CHANNELS) || '[]'),
@@ -67,8 +86,7 @@ export const storageService = {
       settings: {
         geminiKey: localStorage.getItem(KEYS.GEMINI_KEY) || '',
         groqKey: localStorage.getItem(KEYS.GROQ_KEY) || '',
-        // Fixed: Changed default value to 'gemini-3-flash' to match GeminiModelId type
-        geminiModel: localStorage.getItem(KEYS.GEMINI_MODEL) || 'gemini-3-flash',
+        geminiModel: localStorage.getItem(KEYS.GEMINI_MODEL) || 'gemini-3-flash-preview',
         engine: localStorage.getItem(KEYS.SELECTED_ENGINE) || 'gemini'
       },
       meta: {
@@ -83,17 +101,21 @@ export const storageService = {
   importData: (jsonString: string) => {
     try {
       const data = JSON.parse(jsonString);
+      
       if (!Array.isArray(data.channels) || !Array.isArray(data.projects)) {
         throw new Error("Format file backup tidak valid.");
       }
+
       localStorage.setItem(KEYS.CHANNELS, JSON.stringify(data.channels));
       localStorage.setItem(KEYS.PROJECTS, JSON.stringify(data.projects));
+      
       if (data.settings) {
         if (data.settings.geminiKey) localStorage.setItem(KEYS.GEMINI_KEY, data.settings.geminiKey);
         if (data.settings.groqKey) localStorage.setItem(KEYS.GROQ_KEY, data.settings.groqKey);
         if (data.settings.geminiModel) localStorage.setItem(KEYS.GEMINI_MODEL, data.settings.geminiModel);
         if (data.settings.engine) localStorage.setItem(KEYS.SELECTED_ENGINE, data.settings.engine);
       }
+      
       return true;
     } catch (e) {
       console.error("Import Failed:", e);
