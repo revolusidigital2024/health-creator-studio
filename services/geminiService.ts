@@ -13,87 +13,110 @@ import {
 } from "./promptTemplates";
 
 // --- CONFIGURATION ---
-
-// Helper sentral untuk memanggil Gemini API
-const callGemini = async (prompt: string, expectJson: boolean = false) => {
+const getGenAIClient = () => {
   const apiKey = storageService.getGeminiKey();
-  if (!apiKey) {
-    throw new Error("API Key Gemini belum diatur. Silakan ke menu Pengaturan.");
+  if (!apiKey) throw new Error("API Key Gemini belum diatur.");
+  return new GoogleGenerativeAI(apiKey);
+};
+
+const getModelName = (): string => {
+  // Kita paksa pakai model yang stabil dulu kalau yang baru bermasalah
+  // Coba pakai 'gemini-1.5-flash' dulu untuk tes kestabilan JSON
+  return (localStorage.getItem('health_creator_gemini_model') as string) || 'gemini-3-flashi-preview';
+};
+
+// HELPER: PARSER JSON "BODOH TAPI KUAT"
+const parseRobustJson = (text: string) => {
+  console.log("📦 RAW TEXT DARI AI:", text); // Cek ini di Console!
+  
+  try {
+    // 1. Coba parse langsung
+    return JSON.parse(text);
+  } catch (e) {
+    // 2. Kalau gagal, cari { pertama dan } terakhir
+    try {
+      const start = text.indexOf('{');
+      const end = text.lastIndexOf('}');
+      if (start !== -1 && end !== -1) {
+        const jsonString = text.substring(start, end + 1);
+        // Bersihkan karakter kontrol aneh (newline, tab, dll yang gak valid di JSON string)
+        // const cleanString = jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, ""); 
+        return JSON.parse(jsonString);
+      }
+    } catch (e2) {
+      console.error("❌ Gagal Parsing JSON Manual:", e2);
+    }
   }
   
-  const genAI = new GoogleGenerativeAI(apiKey);
-  
-  // Ambil model yang dipilih user, default ke Gemini 3 Flash
-  const modelName = (localStorage.getItem('health_creator_gemini_model') as GeminiModelId) || 'gemini-3-flash-preview';
+  throw new Error("AI tidak memberikan JSON yang valid. Coba lagi.");
+};
 
+// Helper Call API
+const callGemini = async (prompt: string, expectJson: boolean = false) => {
+  console.log("🚀 Mengirim Request ke AI...", { model: getModelName(), expectJson });
+  
+  const genAI = getGenAIClient();
   const model = genAI.getGenerativeModel({ 
-    model: modelName,
+    model: getModelName(),
     generationConfig: expectJson ? { responseMimeType: "application/json" } : undefined
   });
   
   try {
     const result = await model.generateContent(prompt);
-    return result.response.text();
+    const response = await result.response;
+    const text = response.text();
+    
+    if (!text) throw new Error("AI memberikan respon kosong.");
+    
+    return text;
   } catch (error: any) {
-    console.error(`Error saat memanggil Gemini (model: ${modelName}):`, error);
-    if (error.message.includes('API key not valid')) {
-      throw new Error("API Key Gemini tidak valid. Cek kembali di menu Pengaturan.");
-    }
-    // Coba tangkap error safety filter
-    if (error.message.includes('SAFETY')) {
-      throw new Error("Konten diblokir oleh filter keamanan AI. Coba topik lain yang lebih aman.");
-    }
+    console.error("🔥 API ERROR:", error);
+    if (error.message.includes('SAFETY')) throw new Error("Konten diblokir filter keamanan.");
     throw new Error(error.message || "Gagal menghubungi Gemini.");
   }
 };
 
-// Helper untuk parsing JSON dengan lebih aman
-const parseSafeJson = (text: string) => {
-  if (!text) return null;
-  try {
-    // Coba parse langsung, karena MimeType JSON harusnya sudah bersih
-    return JSON.parse(text);
-  } catch (e) {
-    // Fallback kalau AI bandel dan tidak return JSON bersih
-    try {
-      const jsonMatch = text.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
-      if (jsonMatch && jsonMatch[0]) {
-        return JSON.parse(jsonMatch[0]);
-      }
-    } catch (innerE) {
-      console.error("Gagal total parsing JSON:", text);
-    }
-  }
-  throw new Error("AI memberikan respon yang tidak bisa dibaca (Bukan format JSON).");
-};
-
-
 // --- API SERVICES ---
 
 export const suggestNicheTopics = async (niche: string, targetAge: string, language: string, useWebSearch: boolean) => {
-  const prompt = `Hasilkan 5 ide topik video viral untuk channel kesehatan "${niche}" dengan target audiens "${targetAge}". Bahasa: ${language}. Format: JSON array [{"topic": "...", "angle": "..."}]`;
-  const responseText = await callGemini(prompt, true);
-  return { topics: parseSafeJson(responseText) || [], sources: [] };
+  const prompt = `Generate 5 viral video topic ideas for channel "${niche}" audience "${targetAge}". Language: ${language}. Output JSON array: [{"topic": "...", "angle": "..."}]`;
+  const text = await callGemini(prompt, true);
+  // Khusus Array
+  const start = text.indexOf('[');
+  const end = text.lastIndexOf(']');
+  if (start !== -1 && end !== -1) {
+     return { topics: JSON.parse(text.substring(start, end + 1)), sources: [] };
+  }
+  return { topics: [], sources: [] };
 };
 
 export const generateOutline = async (topic: string, age: string, niche: string, lang: string, duration: VideoDuration) => {
   const prompt = buildOutlinePrompt(topic, niche, age, lang);
-  const responseText = await callGemini(prompt, true);
-  const data = parseSafeJson(responseText);
-  if (!data || !data.title) throw new Error("Data naskah tidak lengkap.");
+  const text = await callGemini(prompt, true); // Paksa JSON Mode
+  const data = parseRobustJson(text);
+  
+  // Validasi Data
+  if (!data || !data.title || !data.outline) {
+    console.error("Data tidak lengkap:", data);
+    throw new Error("Struktur data dari AI tidak lengkap. Coba topik lain.");
+  }
+  
   return data;
 };
 
 export const generateScriptSegment = async (topic: string, section: OutlineSection, persona: Persona, age: string, lang: string, doctorName: string) => {
   const prompt = buildDraftingPrompt(topic, section, persona, age, lang, doctorName);
-  const responseText = await callGemini(prompt, false);
-  return responseText.trim();
+  const text = await callGemini(prompt, false); // Teks biasa
+  return text.replace(/\*\*/g, '').trim();
 };
 
 export const generateWeeklyPlan = async (niche: string, targetAge: string, language: string = 'id', focusFormat?: string) => {
   const prompt = buildWeeklyPlanPrompt(niche, targetAge, language, focusFormat);
-  const responseText = await callGemini(prompt, true);
-  return parseSafeJson(responseText) || [];
+  const text = await callGemini(prompt, true);
+  const start = text.indexOf('[');
+  const end = text.lastIndexOf(']');
+  if (start !== -1 && end !== -1) return JSON.parse(text.substring(start, end + 1));
+  return [];
 };
 
 export const generateImagePrompt = async (doctor: any, topic: string, hook: string) => {
@@ -108,25 +131,26 @@ export const enhanceDoctorProfile = async (simpleDescription: string) => {
 
 export const generateSSMLInstructions = async (fullScript: string, voiceStyle: string) => {
   const prompt = buildSSMLPrompt(fullScript, voiceStyle);
-  const responseText = await callGemini(prompt, false);
-  // Auto-cleaner untuk SSML
-  const lines = responseText.split('\n');
-  const firstRealLineIndex = lines.findIndex(line => line.trim().startsWith('(') || line.trim().startsWith('Halo'));
-  let cleanedText = responseText;
-  if (firstRealLineIndex !== -1) {
-    cleanedText = lines.slice(firstRealLineIndex).join('\n');
-  }
-  return cleanedText.replace(/\*\*/g, '').trim();
+  let text = await callGemini(prompt, false);
+  // Auto Cleaner
+  const lines = text.split('\n');
+  const startIdx = lines.findIndex(l => l.trim().startsWith('(') || l.trim().startsWith('Halo'));
+  if (startIdx !== -1) text = lines.slice(startIdx).join('\n');
+  return text.replace(/\*\*/g, '').trim();
 };
 
 export const generateVisualPrompts = async (fullScript: string) => {
   const prompt = buildVisualPromptsPrompt(fullScript);
-  const responseText = await callGemini(prompt, true);
-  return parseSafeJson(responseText) || [];
+  const text = await callGemini(prompt, true);
+  // Array Parsing
+  const start = text.indexOf('[');
+  const end = text.lastIndexOf(']');
+  if (start !== -1 && end !== -1) return JSON.parse(text.substring(start, end + 1));
+  return [];
 };
 
 export const generatePackaging = async (topic: string, fullScript: string, targetAge: string) => {
   const prompt = buildPackagingPrompt(topic, fullScript, targetAge);
-  const responseText = await callGemini(prompt, true);
-  return parseSafeJson(responseText);
+  const text = await callGemini(prompt, true);
+  return parseRobustJson(text);
 };
