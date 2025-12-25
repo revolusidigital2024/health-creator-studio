@@ -1,7 +1,7 @@
 import React from 'react';
 import { WeeklyPlanner } from '../WeeklyPlanner';
 import { Channel, Language, WeeklyPlanItem } from '../../types';
-import { AlertTriangle, Stethoscope, Microscope, Quote, Command, Globe, Loader2, ArrowRight } from 'lucide-react';
+import { AlertTriangle, Stethoscope, Microscope, Quote, Command, Globe, Loader2, ArrowRight, RotateCcw } from 'lucide-react'; // Tambah RotateCcw
 import { cn } from '../../lib/utils';
 
 // Definisi Format
@@ -24,15 +24,18 @@ interface Props {
   useWebSearch: boolean;
   setUseWebSearch: (b: boolean) => void;
   engine: string;
-  // Props baru untuk Weekly Planner
   weeklyPlan: WeeklyPlanItem[] | undefined;
   onPlanGenerated: (strategy: 'mix' | 'focus', formatLabel: string) => Promise<void>;
+  // Props Baru untuk Fitur Resume
+  hasExistingData: boolean;
+  onResume: () => void;
 }
 
 export const StepIdeation: React.FC<Props> = ({
   channel, language, topic, setTopic, selectedFormat, setSelectedFormat,
   loading, onGenerate, useWebSearch, setUseWebSearch, engine,
-  weeklyPlan, onPlanGenerated
+  weeklyPlan, onPlanGenerated,
+  hasExistingData, onResume
 }) => {
   const currentFormat = VIDEO_FORMATS.find(f => f.id === selectedFormat) || VIDEO_FORMATS[1];
 
@@ -103,9 +106,31 @@ export const StepIdeation: React.FC<Props> = ({
                   <button onClick={() => setUseWebSearch(!useWebSearch)} className={cn("p-3 rounded-xl transition-all border flex items-center gap-2", useWebSearch ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-slate-50 border-slate-100 text-slate-400")} title="Cari referensi dari web">
                     <Globe size={18} /> {useWebSearch && <span className="text-[10px] font-bold">ON</span>}
                   </button>
-                  <button onClick={onGenerate} disabled={loading || !topic} className={cn("px-8 py-4 rounded-2xl font-black text-white transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg hover:scale-105", selectedFormat === 'myth' ? 'bg-amber-500' : selectedFormat === 'case' ? 'bg-blue-600' : selectedFormat === 'story' ? 'bg-purple-600' : 'bg-emerald-600')}>
-                    {loading ? <Loader2 className="animate-spin" size={20} /> : <ArrowRight size={20} />}
-                    {loading ? 'Sedang Mikir...' : 'Buat Naskah'} 
+                  
+                  {/* --- TOMBOL RESUME (FITUR BARU) --- */}
+                  {hasExistingData && (
+                    <button 
+                      onClick={onResume}
+                      className="px-5 py-4 bg-white border-2 border-slate-200 text-slate-600 rounded-2xl font-bold transition-all flex items-center gap-2 hover:bg-slate-50 hover:border-emerald-500 hover:text-emerald-600 shadow-sm"
+                      title="Lanjut Edit Naskah Sebelumnya"
+                    >
+                      Lanjut <ArrowRight size={18} />
+                    </button>
+                  )}
+
+                  {/* Tombol Generate Utama */}
+                  <button 
+                    onClick={onGenerate} 
+                    disabled={loading || !topic} 
+                    className={cn(
+                      "px-8 py-4 rounded-2xl font-black text-white transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg hover:scale-105", 
+                      selectedFormat === 'myth' ? 'bg-amber-500' : 
+                      selectedFormat === 'case' ? 'bg-blue-600' : 
+                      selectedFormat === 'story' ? 'bg-purple-600' : 'bg-emerald-600'
+                    )}
+                  >
+                    {loading ? <Loader2 className="animate-spin" size={20} /> : (hasExistingData ? <RotateCcw size={18}/> : <ArrowRight size={20} />)}
+                    {loading ? 'Sedang Mikir...' : (hasExistingData ? 'Buat Ulang' : 'Buat Naskah')} 
                   </button>
                </div>
             </div>
@@ -118,7 +143,6 @@ export const StepIdeation: React.FC<Props> = ({
         onSelectTopic={handlePlanSelection} 
         engine={engine}
         currentFormatLabel={currentFormat.label}
-        // Kirim data & fungsi baru
         plan={weeklyPlan}
         onGeneratePlan={onPlanGenerated}
       />
