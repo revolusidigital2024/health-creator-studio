@@ -1,39 +1,15 @@
 import React from 'react';
 import { WeeklyPlanner } from '../WeeklyPlanner';
-import { Channel, Language } from '../../types';
+import { Channel, Language, WeeklyPlanItem } from '../../types';
 import { AlertTriangle, Stethoscope, Microscope, Quote, Command, Globe, Loader2, ArrowRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-// --- CONFIGURATION BAHASA INDONESIA ---
+// Definisi Format
 export const VIDEO_FORMATS = [
-  { 
-    id: 'myth', 
-    label: 'Mitos vs Fakta', 
-    icon: AlertTriangle, 
-    color: 'amber', 
-    placeholder: 'Mitos kesehatan apa yang mau dibongkar? (cth: Mandi malam bikin rematik)' 
-  },
-  { 
-    id: 'list', 
-    label: 'Listicle (5 Tips)', 
-    icon: Stethoscope, 
-    color: 'emerald', 
-    placeholder: 'Topik tips apa hari ini? (cth: 5 Makanan penurun darah tinggi)' 
-  },
-  { 
-    id: 'case', 
-    label: 'Bedah Kasus', 
-    icon: Microscope, 
-    color: 'blue', 
-    placeholder: 'Kasus penyakit apa yang mau dibedah? (cth: Komplikasi diabetes lansia)' 
-  },
-  { 
-    id: 'story', 
-    label: 'Cerita Pasien', 
-    icon: Quote, 
-    color: 'purple', 
-    placeholder: 'Cerita pasien apa yang mau diangkat? (cth: Perjuangan sembuh stroke)' 
-  },
+  { id: 'myth', label: 'Mitos vs Fakta', icon: AlertTriangle, color: 'amber', placeholder: 'Mitos apa yang mau dibongkar?' },
+  { id: 'list', label: 'Listicle (5 Tips)', icon: Stethoscope, color: 'emerald', placeholder: 'Topik tips apa hari ini?' },
+  { id: 'case', label: 'Bedah Kasus', icon: Microscope, color: 'blue', placeholder: 'Kasus penyakit apa yang mau dibedah?' },
+  { id: 'story', label: 'Cerita Pasien', icon: Quote, color: 'purple', placeholder: 'Cerita pasien apa yang mau diangkat?' },
 ];
 
 interface Props {
@@ -48,13 +24,16 @@ interface Props {
   useWebSearch: boolean;
   setUseWebSearch: (b: boolean) => void;
   engine: string;
+  // Props baru untuk Weekly Planner
+  weeklyPlan: WeeklyPlanItem[] | undefined;
+  onPlanGenerated: (strategy: 'mix' | 'focus', formatLabel: string) => Promise<void>;
 }
 
 export const StepIdeation: React.FC<Props> = ({
   channel, language, topic, setTopic, selectedFormat, setSelectedFormat,
-  loading, onGenerate, useWebSearch, setUseWebSearch, engine
+  loading, onGenerate, useWebSearch, setUseWebSearch, engine,
+  weeklyPlan, onPlanGenerated
 }) => {
-  
   const currentFormat = VIDEO_FORMATS.find(f => f.id === selectedFormat) || VIDEO_FORMATS[1];
 
   const handlePlanSelection = (title: string, type: string) => {
@@ -138,7 +117,10 @@ export const StepIdeation: React.FC<Props> = ({
         language={language} 
         onSelectTopic={handlePlanSelection} 
         engine={engine}
-        currentFormatLabel={currentFormat.label} 
+        currentFormatLabel={currentFormat.label}
+        // Kirim data & fungsi baru
+        plan={weeklyPlan}
+        onGeneratePlan={onPlanGenerated}
       />
     </div>
   );

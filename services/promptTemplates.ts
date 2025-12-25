@@ -23,17 +23,15 @@ export const buildOutlinePrompt = (topic: string, niche: string, age: string, la
 
     Return ONLY JSON structure:
     {
-      "title": "Clickbait Title",
-      "hook": "First 10 seconds hook script",
+      "title": "A compelling, viral-ready title",
+      "hook": "A 10-second opening script to grab attention",
       "outline": [
-        { "section": "Intro & Agitation", "points": ["Hook the viewer", "State the problem", "Promise a solution"] },
-        { "section": "Understanding the Root Cause", "points": ["Common myth", "Scientific reality", "Data/Study"] },
-        { "section": "The Hidden Mechanism", "points": ["Anatomy explanation", "Simple analogy", "Why it happens"] },
-        { "section": "The Risks", "points": ["Short term effects", "Long term danger", "Patient story example"] },
-        { "section": "Solution Step 1: Diet/Habit", "points": ["What to do", "How to do it", "Why it works"] },
-        { "section": "Solution Step 2: Exercise/Action", "points": ["Step by step guide", "Common mistakes", "Expected result"] },
-        { "section": "Doctor's Secret Hack", "points": ["Bonus tip", "Prevention advice"] },
-        { "section": "Conclusion", "points": ["Recap main points", "Final encouragement", "Subscribe CTA"] }
+        { "section": "Introduction", "points": ["Hook", "Problem Statement", "What we will cover"] },
+        { "section": "Deep Dive Section 1", "points": ["Detailed Point 1", "Detailed Point 2", "Detailed Point 3"] },
+        { "section": "Deep Dive Section 2", "points": ["Detailed Point 1", "Detailed Point 2", "Detailed Point 3"] },
+        { "section": "Deep Dive Section 3", "points": ["Detailed Point 1", "Detailed Point 2", "Detailed Point 3"] },
+        { "section": "Actionable Steps", "points": ["Step 1", "Step 2", "Step 3"] },
+        { "section": "Summary & CTA", "points": ["Recap", "Call to Action"] }
       ]
     }
   `;
@@ -48,212 +46,153 @@ export const buildDraftingPrompt = (
   lang: string, 
   doctorName: string
 ) => {
-  const languageName = lang === 'id' ? 'Indonesian (Bahasa Indonesia)' : 'English';
-  
-  const pName = persona.name.toLowerCase();
-  const isUrgent = persona.id === 'urgent' || pName.includes('warning') || pName.includes('tegas');
-  const isIntro = section.section.toLowerCase().includes('intro');
-  
-  let greetingInstruction = "";
-  if (isIntro) {
-     greetingInstruction = isUrgent
-      ? `Start with a shocking statement/question. Then, introduce yourself like "Saya ${doctorName}, dan di sini kita akan..."`
-      : `Start with a friendly greeting like "Halo semuanya, saya ${doctorName}."`;
-  } else {
-     greetingInstruction = "NO GREETINGS. Continue the flow.";
-  }
+  const languageName = lang === 'id' ? 'Indonesian (Spoken/Conversational)' : 'English (Spoken/Conversational)';
+  const isIntro = section.section.toLowerCase().includes('introduction') || section.section.toLowerCase().includes('intro');
 
   return `
-    Act as a Charismatic Medical Communicator and YouTube Scriptwriter. Your goal is to write a script that has a natural, human-like rhythm for a Voice Over.
+    You are ${doctorName}, a medical doctor writing a script for a YouTube video.
     
     CONTEXT:
     - Topic: "${topic}"
-    - Section to Write: "${section.section}"
+    - Section: "${section.section}"
     - Key Points: ${section.points.join(', ')}
     - Audience: ${age}
     - Language: ${languageName}
-    
-    IDENTITY & TONE:
-    - Speaker Name: "${doctorName}"
-    - Speaking Style: "${persona.name}" (${persona.description}).
-    - CRITICAL: Your name is ${doctorName}. Do NOT introduce yourself as "${persona.name}".
-    
-    RHYTHM WRITING RULES (MUST FOLLOW):
-    1.  **VARY SENTENCE LENGTH:** Mix short, punchy sentences (3-7 words) with longer, more complex sentences (15-20 words).
-    2.  **CONVERSATIONAL CONNECTORS:** Use natural Indonesian connectors like "Nah, ternyata...", "Jadi, intinya...".
-    3.  **ACTIVE VOICE:** Use active verbs like "Kita akan MEMBONGKAR...".
-    4.  **FORMAT:** Plain text paragraphs only. NO MARKDOWN (**), NO VISUAL CUES ([Visual]).
-    
-    ${greetingInstruction}
-    
-    Task: Write the full narration for this section. Make it sound like a real, engaging doctor on a podcast, NOT a robot listing facts.
+    - Persona: ${persona.name} (${persona.description})
+
+    STRICT RULES:
+    1.  **INTRODUCTION LOGIC:**
+        ${isIntro 
+          ? `YES, this is the Intro. Start with: "Halo, saya Dokter ${doctorName}..." then hook the audience.` 
+          : `NO, this is NOT the intro. DO NOT introduce yourself. DO NOT say "Halo" or "Welcome back". Dive straight into the explanation.`}
+
+    2.  **HUMAN & CONVERSATIONAL TONE:**
+        - **Stop sounding like a robot.** Do not use stiff formal Indonesian (Baku).
+        - Use "Bahasa Gaul yang Sopan" (Polite Casual).
+        - Use particles like "lho", "kok", "sih", "nah", "kan" to sound natural.
+        - BAD: "Hal ini mengindikasikan bahwa..." -> GOOD: "Nah, ini artinya..."
+        - BAD: "Anda disarankan untuk..." -> GOOD: "Saran saya, coba deh..."
+        - BAD: "Berikut adalah penjelasannya." -> GOOD: "Gini penjelasannya..."
+        - Use "Saya" for "I" and "Anda" for "You".
+
+    3.  **OUTPUT FORMAT:**
+        - Plain text only. No markdown (**bold**), no [Scene], no "Title:". Just the spoken words.
   `;
 };
 
 // 3. WEEKLY PLAN PROMPT
 export const buildWeeklyPlanPrompt = (niche: string, targetAge: string, lang: string, focusFormat?: string) => {
-  const languageName = lang === 'id' ? 'Indonesian (Bahasa Indonesia)' : 'English';
-  
-  let instruction = "";
-  if (focusFormat) {
-      instruction = `Create a 5-day content calendar where EVERY DAY focuses on the format: "${focusFormat}". Ensure topics are varied.`;
-  } else {
-      instruction = `
-      The content mix must be STRICTLY EDUCATIONAL & MEDICAL:
-      - Day 1: Medical Myth Busting
-      - Day 2: Clinical Case Study / Bedah Kasus (DO NOT use "Inspirational Story")
-      - Day 3: Medical Hack / Tips
-      - Day 4: Deep Dive / Explanation
-      - Day 5: Q&A / FAQ`;
-  }
-
+  const languageName = lang === 'id' ? 'Indonesian' : 'English';
   return `
-    Act as a generic professional Doctor / Medical Expert specializing in "${niche}" for audience "${targetAge}".
-    Create a 5-day content calendar (Monday to Friday).
-    
-    ${instruction}
-
+    Create a 5-day health content calendar for niche: "${niche}" targeting "${targetAge}".
     Language: ${languageName}.
-    Tone: Professional, Empathetic, Scientific but easy to understand.
+    Focus Format: ${focusFormat || 'Mixed formats (Myths, Tips, Cases)'}.
     
-    Output ONLY valid JSON array without markdown. Structure:
-    [ { "day": "Senin", "type": "${focusFormat || 'Mitos'}", "title": "...", "hook": "..." }, ... ]
+    Return a JSON array of 5 objects:
+    [{"day": "Day Name", "type": "Topic Category", "title": "Catchy Title", "hook": "Opening hook line"}]
   `;
 };
 
 // 4. IMAGE PROMPT
 export const buildImagePrompt = (doctor: any, topic: string, hook: string) => {
   return `
-    Act as an Expert AI Prompt Engineer for Midjourney v6.
-    We need a character asset for a video overlay. The character MUST look authentically INDONESIAN.
-    
-    Doctor Profile:
-    - Name: ${doctor.name}
-    - Gender: ${doctor.gender}
-    - Appearance: ${doctor.appearance}
-    
-    COMPOSITION RULES:
-    1. **Shot:** Medium Shot (Waist-Up). Sitting pose.
-    2. **Background:** SOLID CHROMA KEY GREEN BACKGROUND.
-    3. **Lighting:** Cinematic Podcast Lighting with STRONG RIM LIGHT.
-    4. **Face:** Looking directly at camera.
-    
-    Keywords: "South East Asian, Indonesian, Sawo Matang Skin, Chroma Key, Rim Lighting, 8k, Photorealistic, --ar 16:9"
-    
-    Output ONLY the prompt text in English.
+    Midjourney prompt: Professional ${doctor.gender} doctor named ${doctor.name}, ${doctor.appearance}, wearing ${doctor.outfit}. 
+    Standing in a modern high-end clinic, cinematic lighting, photorealistic, 8k, bokeh background.
   `;
 };
 
 // 5. ENHANCE PROMPT
 export const buildEnhancePrompt = (description: string) => {
-  return `
-    Act as an AI Visual Prompter.
-    Translate this simple Indonesian description of a doctor into a detailed, high-quality English visual description suitable for AI Image Generation.
-    Input (Indonesian): "${description}"
-    Requirements: Translate to English, add professional details, keep core features, add "High quality, 8k, photorealistic".
-    Output ONLY the text.
-  `;
+  return `Improve this character description into a professional Midjourney visual prompt: "${description}". Output ONLY the prompt.`;
 };
 
-// 6. VOCAL DIRECTOR PROMPT (VERSI NARATIF)
+// 6. VOCAL DIRECTOR PROMPT (EMOTIONAL ARC PROFILER)
 export const buildSSMLPrompt = (fullScript: string, voiceStyle: string) => {
   return `
-    Act as a professional Voice Over Director.
-    Your job is to take a raw script and add "Directorial Notes" inside the text to guide the voice actor.
-    
-    Script:
+    You are an expert YouTube Vocal Director and Script Coach. Your task is to rewrite a script with detailed, narrative vocal cues.
+
+    **YOUR THOUGHT PROCESS (Chain-of-Thought):**
+    1.  **Analyze the Narrative Arc:** First, read the ENTIRE script below. Identify the emotional journey. Where does it start (e.g., mysterious, anxious)? Where is the turning point (e.g., factual, confident)? How does it end (e.g., empowering, encouraging)?
+    2.  **Plan the Vocal Strategy:** Based on the arc, plan your vocal cues. The intro should build tension. The middle should be clear and authoritative. The conclusion should be warm and inspiring. Don't just add random pauses.
+    3.  **Execute the Rewrite:** Now, rewrite the script, inserting your planned cues.
+
+    **RULES for Cues:**
+    -   Place cues in parentheses \`()\`.
+    -   Be highly descriptive: "(nada sedikit prihatin, tempo melambat)", "(nada berubah jadi optimis, lebih cepat)".
+    -   Insert cues **INSIDE sentences** for pauses: "Ini penting (jeda singkat) karena..."
+    -   Use **CAPITALIZATION** for words that need strong emphasis.
+
+    Here is the script to process:
     """
     ${fullScript}
     """
-    
-    Voice Style: "${voiceStyle}" (e.g., 'Santai & Empati', 'Tegas & Cepat').
-    
-    INSTRUCTIONS (MUST FOLLOW):
-    1.  **Insert notes in parentheses ( )**: Add instructions for tone, speed, emotion, or pauses.
-    2.  **Be Descriptive**: Instead of "<break time='1s'>", write "(jeda 1 detik, tarik napas)".
-    3.  **Emotion**: Add emotion cues like "(nada sedih)", "(suara bergetar)", "(antusias)".
-    4.  **Emphasis**: If a word needs stress, CAPITALIZE it. e.g., "Ini SANGAT penting."
-    5.  **Language**: Write the instructions in Indonesian (since the script is Indonesian).
-    
-    Example Output:
-    "(Suara tegas, tempo cepat) JANGAN LAGI SAKITI DIRI SENDIRI! (jeda sejenak, tarik napas dalam) Rasa malu yang membakar..."
-    
-    Task: Rewrite the full script with these directorial notes embedded naturally.
   `;
 };
 
-// 7. STORYBOARD DIRECTOR PROMPT (BARU)
+// 7. STORYBOARD DIRECTOR PROMPT
 export const buildVisualPromptsPrompt = (fullScript: string) => {
   return `
-    Act as a professional Video Director and AI Prompt Engineer for a medical education YouTube channel.
+    You are a Visual Director for a premium medical documentary channel.
+    Your goal is to create a B-Roll storyboard that is visually stunning, scientific, and emotionally resonant.
     
-    Your input is a full Indonesian voice-over script.
-    Your task is to create a visual storyboard by breaking down the script into logical scenes and generating a corresponding B-roll image prompt for each scene.
-    
-    Script:
-    """
-    ${fullScript}
-    """
-    
-    INSTRUCTIONS:
-    1.  **Break Down Script:** Split the script into small, logical scenes (usually 1-3 paragraphs per scene).
-    2.  **Generate Prompts:** For each scene, create a highly detailed, cinematic text-to-image prompt (for Midjourney/Flux) that visually represents the spoken text.
-        - Use concepts like "Medical animation of...", "Diagram showing...", "Close up shot of...", "Stock photo style of a person feeling...".
-        - Prompts MUST be in English.
-    3.  **Format:** Output ONLY a valid JSON array. Each object must have "scene_text" and "image_prompt".
-    
-    Example Output:
-    [
-      {
-        "scene_text": "Apakah Anda pernah dengar? Masturbasi itu bikin buta. Atau bikin mandul? Bahkan bisa merusak otak?",
-        "image_prompt": "Cinematic close up, anxious person's face in dark room, illuminated by phone screen showing scary myths, worried expression, hyper-realistic, 8k, --ar 16:9"
-      },
-      {
-        "scene_text": "Seringkali, ini adalah sinyal peringatan serius dari tubuhmu. Itu bisa berarti ada masalah pada pembuluh darah halus...",
-        "image_prompt": "3D medical animation of human circulatory system, highlighting constricted blood vessels in the pelvic area, red and blue arteries, scientific diagram, professional, clean background, 8k"
-      }
-    ]
+    **VISUAL STYLE GUIDE:**
+
+    1.  **The "Inner Universe" (3D Medical Animation):**
+        - Visualize the body's interior like a sci-fi landscape.
+        - Examples: Red blood cells rushing through a vein (Cinematic), Neurons firing (Electric blue), DNA strands rotating (Gold/Silver).
+        - Style: Octane Render, Unreal Engine 5, 8k, Hyper-detailed.
+
+    2.  **Cinematic Human Emotion (High-End):**
+        - Use human subjects to depict symptoms or feelings, but make it CINEMATIC and ARTISTIC.
+        - **AVOID:** Cheesy, generic stock photos with white backgrounds or fake smiles.
+        - **PREFER:** Dramatic lighting, moody atmosphere, genuine expressions, shallow depth of field (bokeh).
+        - Example (Pain): Silhouette of a person holding their head in a dark room, dramatic rim lighting.
+        - Example (Peace): Close-up of a face relaxing, soft warm sunlight, peaceful expression.
+
+    3.  **Macro & Clinical Precision:**
+        - Extreme close-ups of medical instruments (Scalpel, Stethoscope) with bokeh.
+        - Macro shots of natural elements (Water, Fruits, Herbs) for nutrition topics.
+        - Clean, sterile, futuristic lab backgrounds (Blurred).
+
+    **TASK:**
+    Analyze the script and return a JSON array of visual scenes.
+    Format: [{"scene_text": "Segment of script", "image_prompt": "Midjourney prompt..."}]
+
+    Script: ${fullScript}
   `;
 };
 
-// 8. PACKAGING PROMPT (HIGH CTR EDITION)
+// 8. PACKAGING PROMPT (THUMBNAIL ASSEMBLY LINE EDITION)
 export const buildPackagingPrompt = (topic: string, fullScript: string, targetAge: string) => {
   return `
-    Act as a World-Class YouTube Strategist & SEO Expert.
-    Your goal is to maximize CTR (Click Through Rate) for a health video.
+    You are a world-class YouTube Strategist & Graphic Designer for a medical channel. Your goal is to design a high-CTR thumbnail concept.
     
     Context:
     - Topic: "${topic}"
     - Audience: "${targetAge}"
     - Script Summary: "${fullScript.slice(0, 500)}..."
     
-    TASK 1: VIRAL TITLES (Indonesian)
-    Create 5 variations using psychological hooks.
-    **CONSTRAINT:** Each title MUST be under 100 characters.
+    **TASK 1: VIRAL TITLES (Indonesian)**
+    Generate 5 titles under 100 characters using psychological hooks.
+
+    **TASK 2: SEO DESCRIPTION & TAGS (Indonesian)**
+    Write a 3-paragraph SEO description, 15 hashtags, and 20 comma-separated tags (under 500 chars total).
+
+    **TASK 3: THUMBNAIL ASSEMBLY INSTRUCTIONS (2 Options)**
+    For each option, provide a plan for a human designer. Assume they already have PNG assets of the doctor (e.g., Doctor_Smiling.png, Doctor_Serious.png).
+    -   **Assembly Instructions (Indonesian):** Tell the designer how to compose the thumbnail. e.g., "Gunakan aset 'Dokter Pose Serius' di kanan. Beri efek glow kuning. Di sebelah kiri, letakkan gambar B-Roll dari prompt di bawah ini."
+    -   **Overlay Text (Indonesian):** Max 3-4 provocative words. e.g., "AWAS MANDUL?", "STOP SEKARANG!".
+    -   **Background Prompt (English):** Midjourney prompt for the BACKGROUND/B-ROLL image ONLY. DO NOT include the doctor in this prompt. e.g., "dramatic red background, abstract medical symbols, cinematic lighting, --ar 16:9".
     
-    TASK 2: SEO DESCRIPTION (Indonesian)
-    Write a compelling video description (100-150 words) including strong hook & 15 hashtags.
-    
-    TASK 3: SEO TAGS
-    List 20 comma-separated keywords (Max 500 chars total).
-    
-    TASK 4: THUMBNAIL STRATEGY (2 High-CTR Options)
-    For each option, provide:
-    - **Visual Concept:** Describe the scene.
-    - **Overlay Text:** Short, punchy text (Max 3-4 words). **MUST BE CLICKBAIT/PROVOCATIVE.** 
-      - BAD: "Mitos vs Fakta" (Too boring)
-      - GOOD: "JANGAN LAKUKAN!", "AWAS BUTA!", "STOP SEKARANG!", "FAKTA MENGERIKAN"
-    - **Image Prompt:** Midjourney prompt (English).
-    
-    OUTPUT JSON FORMAT ONLY:
+    **OUTPUT JSON FORMAT ONLY:**
     {
-      "titles": ["Title 1", ...],
+      "titles": ["..."],
       "description": "...",
-      "hashtags": ["#tag1", ...],
-      "tags": "tag1, tag2...",
+      "hashtags": ["..."],
+      "tags": "...",
       "thumbnails": [
-        { "concept": "...", "text": "...", "prompt": "..." },
-        { "concept": "...", "text": "...", "prompt": "..." }
+        { "assembly_instructions": "...", "text": "...", "background_prompt": "..." },
+        { "assembly_instructions": "...", "text": "...", "background_prompt": "..." }
       ]
     }
   `;

@@ -1,7 +1,8 @@
+
 export type AgeGroup = 'Kids' | 'Teens' | 'Adults' | 'Seniors';
 export type Language = 'en' | 'id';
 export type VideoDuration = 'short' | 'standard' | 'long';
-export type GeminiModelId = 'gemini-2.5-flash' | 'gemini-2.5-pro';
+export type GeminiModelId = 'gemini-3-flash-preview' | 'gemini-3-pro-preview';
 
 export interface DoctorProfile {
   name: string;
@@ -43,13 +44,21 @@ export interface VisualScene {
   image_prompt: string;
 }
 
-// DEFINISI DATA PACKAGING (BARU)
 export interface PackagingData {
   titles: string[];
   description: string;
   hashtags: string[];
   tags: string;
   thumbnails: { concept: string; text: string; prompt: string }[];
+}
+
+
+// Tipe data untuk Jadwal Mingguan
+export interface WeeklyPlanItem {
+  day: string;
+  type: string;
+  title: string;
+  hook: string;
 }
 
 export interface ContentIdea {
@@ -62,7 +71,8 @@ export interface ContentIdea {
   persona?: Persona;
   ssmlScript?: string;
   visualScenes?: VisualScene[];
-  packaging?: PackagingData; // <-- WADAH BARU DI SINI
+  packaging?: PackagingData;
+  weeklyPlan?: WeeklyPlanItem[]; // <-- WADAH BARU
 }
 
 export interface Project {

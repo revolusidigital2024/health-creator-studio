@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Channel, AgeGroup, DoctorProfile } from '../types';
 import { 
@@ -87,7 +88,7 @@ export const ChannelSetup: React.FC<ChannelSetupProps> = ({ channel, onSave, onC
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        {/* KOLOM KIRI (Tetap Sama) */}
+        {/* KOLOM KIRI */}
         <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-6 h-fit">
             <h3 className="text-xl font-black text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-4 mb-4">
               <Tv className="text-emerald-500" /> Identitas Channel
@@ -102,8 +103,30 @@ export const ChannelSetup: React.FC<ChannelSetupProps> = ({ channel, onSave, onC
             <div className="grid grid-cols-2 gap-4">
                <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Niche</label>
-                <input type="text" required className="w-full px-4 py-3 rounded-xl border border-slate-200 font-bold outline-none focus:border-emerald-500" 
-                  value={formData.niche} onChange={(e) => setFormData({...formData, niche: e.target.value})} placeholder="Kesehatan Umum" />
+                <select 
+                  required 
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 font-bold outline-none focus:border-emerald-500 bg-white"
+                  value={formData.niche} 
+                  onChange={(e) => setFormData({...formData, niche: e.target.value})}
+                >
+                  <option value="Kesehatan Umum">Kesehatan Umum</option>
+                  <optgroup label="Gaya Hidup & Kebugaran">
+                    <option value="Kesehatan Mental">Kesehatan Mental</option>
+                    <option value="Nutrisi & Diet">Nutrisi & Diet</option>
+                    <option value="Fitnes & Yoga">Fitnes & Yoga</option>
+                  </optgroup>
+                  <optgroup label="Medis & Spesialis">
+                    <option value="Penyakit Kronis">Penyakit Kronis</option>
+                    <option value="Kesehatan Lansia">Kesehatan Lansia</option>
+                    <option value="Pediatri (Anak)">Pediatri (Anak)</option>
+                    <option value="Kesehatan Seksual">Kesehatan Seksual</option>
+                  </optgroup>
+                  <optgroup label="Tren & Modern">
+                    <option value="Skincare">Skincare</option>
+                    <option value="Obat Herbal">Obat Herbal</option>
+                    <option value="Biohacking">Biohacking</option>
+                  </optgroup>
+                </select>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Audiens</label>
@@ -128,7 +151,7 @@ export const ChannelSetup: React.FC<ChannelSetupProps> = ({ channel, onSave, onC
             </div>
         </div>
 
-        {/* KOLOM KANAN: PROFIL DOKTER (UPDATE BESAR DISINI) */}
+        {/* KOLOM KANAN: PROFIL DOKTER */}
         <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
             
@@ -144,7 +167,6 @@ export const ChannelSetup: React.FC<ChannelSetupProps> = ({ channel, onSave, onC
                     value={doctor.name} onChange={(e) => setDoctor({...doctor, name: e.target.value})} />
                 </div>
                 
-                {/* UPDATE: GAYA BICARA JADI DROPDOWN */}
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gaya Bicara</label>
                   <select 
@@ -160,12 +182,10 @@ export const ChannelSetup: React.FC<ChannelSetupProps> = ({ channel, onSave, onC
                 </div>
               </div>
 
-              {/* UPDATE: CIRI FISIK DENGAN MAGIC BUTTON */}
               <div>
                   <div className="flex justify-between items-center mb-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ciri Fisik & Penampilan</label>
                     
-                    {/* TOMBOL MAGIC ENHANCE */}
                     <button 
                       type="button" 
                       onClick={handleEnhanceAppearance}
@@ -185,7 +205,6 @@ export const ChannelSetup: React.FC<ChannelSetupProps> = ({ channel, onSave, onC
                       placeholder="Tulis aja pake Bahasa Indonesia: Dokter cewek muda, pake kacamata, senyum manis, jilbab pink..." 
                     />
                     <div className="absolute bottom-3 right-3">
-                       {/* Indikator kecil kalau sudah Inggris */}
                        {doctor.appearance && /^[a-zA-Z0-9\s,.]+$/.test(doctor.appearance.slice(0, 20)) && (
                          <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">English Ready</span>
                        )}
@@ -193,7 +212,6 @@ export const ChannelSetup: React.FC<ChannelSetupProps> = ({ channel, onSave, onC
                   </div>
               </div>
 
-              {/* GENERATOR ASET */}
               <div className="pt-4 border-t border-white/10">
                  <div className="flex justify-between items-center mb-3">
                     <p className="text-[10px] font-bold text-emerald-400 uppercase flex items-center gap-1">

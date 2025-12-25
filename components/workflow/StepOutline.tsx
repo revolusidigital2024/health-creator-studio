@@ -45,7 +45,7 @@ const OutlineItem = ({
           </button>
        </div>
        <div className="space-y-3">
-          {sec.points.map((p: string, i: number) => (
+          {(sec.points && sec.points.length > 0) ? sec.points.map((p: string, i: number) => (
              <div key={i} className="flex items-start gap-3 group">
                 <div className="mt-2 w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0 group-hover:bg-emerald-400 transition-colors" />
                 {isEditing ? (
@@ -57,7 +57,9 @@ const OutlineItem = ({
                   <p className="text-sm font-medium text-slate-600 leading-relaxed py-1">{renderCleanText(p)}</p>
                 )}
              </div>
-          ))}
+          )) : (
+            <div className="text-slate-400 text-sm italic py-2 px-1">Belum ada poin outline. Klik Edit untuk menambah.</div>
+          )}
           {isEditing && (
             <button onClick={() => onAddPoint(idx)} className="mt-2 text-xs font-bold text-emerald-600 flex items-center gap-1 hover:underline ml-5"><Plus size={12} /> Tambah Poin</button>
           )}
@@ -96,10 +98,10 @@ export const StepOutline: React.FC<Props> = ({ blueprint, formatLabel, onNext, o
   };
 
   const calculateDuration = () => {
-    const totalPoints = editableOutline.reduce((acc, sec) => acc + sec.points.length, 0);
-    // Deep Dive Strategy: 1 Poin ~ 25 detik
-    const minutes = Math.floor((totalPoints * 25) / 60);
-    const seconds = (totalPoints * 25) % 60;
+    const totalPoints = editableOutline.reduce((acc, sec) => acc + (sec.points?.length || 0), 0);
+    // Deep Dive Strategy: 1 Poin ~ 30 detik (Updated for Long Form)
+    const minutes = Math.floor((totalPoints * 30) / 60);
+    const seconds = (totalPoints * 30) % 60;
     return `${minutes}m ${seconds}s`;
   };
 

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Channel, WorkflowStep, GeminiModelId } from '../../types';
 import { ArrowLeft, Sparkles, Zap } from 'lucide-react';
@@ -20,8 +21,9 @@ export const WorkflowHeader: React.FC<Props> = ({
   const getModelDisplayName = () => {
     if (engine === 'groq') return 'Groq LPU™';
     const savedModel = localStorage.getItem('health_creator_gemini_model') as GeminiModelId;
-    if (savedModel === 'gemini-2.5-pro') return 'Gemini 2.5 Pro';
-    return 'Gemini 2.5 Flash';
+    // Fixed: Updated comparison and display names to Gemini 3 series to match type definition
+    if (savedModel === 'gemini-3-flash-preview') return 'Gemini-3-pro-preview';
+    return 'Gemini 3 Flash';
   };
 
   return (
