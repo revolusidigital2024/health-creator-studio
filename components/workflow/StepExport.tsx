@@ -34,7 +34,7 @@ const CopyButton = ({ textToCopy }: { textToCopy: string }) => {
 export const StepExport: React.FC<Props> = ({ blueprint, onBack, onFinish }) => {
   const [chunks, setChunks] = useState<SSMLChunk[]>([]);
   const [loading, setLoading] = useState(false);
-  const MAX_CHUNK_SIZE = 2800; // Turunkan dikit biar aman
+  const MAX_CHUNK_SIZE = 2500; // Limit aman Google TTS
 
   useEffect(() => {
     if (chunks.length === 0) {
@@ -87,31 +87,59 @@ export const StepExport: React.FC<Props> = ({ blueprint, onBack, onFinish }) => 
     // 5. NORMALISASI SPASI
     processedScript = processedScript.replace(/\s+/g, ' ').trim();
 
-    // --- CHUNKING ---
-    const paragraphs = processedScript.split(/(?=<break)/); // Pecah berdasarkan break biar rapi
-    // Kalau gak ada break, pecah per kalimat (.)
-    const splitPoints = paragraphs.length > 1 ? paragraphs : processedScript.split('. ');
-
+    // --- CHUNKING (REVISI: SUB-SPLIT & SAFETY LIMIT) ---
+    const WRAPPER_OVERHEAD = 25; // Estimasi panjang <speak>...</speak> + newline
+    
+    // 1. Split awal berdasarkan <break> (menjaga jeda alami)
+    const rawSegments = processedScript.split(/(?=<break)/);
+    
+    // 2. Sub-split: Jika segmen > MAX_CHUNK_SIZE, pecah lagi per kalimat (.)
+    let refinedSegments: string[] = [];
+    for (const seg of rawSegments) {
+      if (seg.length > (MAX_CHUNK_SIZE - WRAPPER_OVERHEAD)) {
+        // Split by period followed by space (keep period)
+        const sentences = seg.split(/(?<=\.)\s+/);
+        refinedSegments.push(...sentences);
+      } else {
+        refinedSegments.push(seg);
+      }
+    }
+    
     const finalChunks: SSMLChunk[] = [];
     let currentChunk = "";
     let chunkId = 1;
 
-    for (const p of splitPoints) {
-      // Tambahkan titik kalau hilang gara-gara split
-      const segment = p.trim().endsWith('>') ? p : p + '. ';
-      
-      if ((currentChunk.length + segment.length) > MAX_CHUNK_SIZE) {
-        if (currentChunk.trim()) {
-          finalChunks.push({ id: chunkId, ssml: `<speak>\n${currentChunk}\n</speak>`, charCount: currentChunk.length });
-          chunkId++;
+    for (const segment of refinedSegments) {
+      const cleanSegment = segment.trim();
+      if (!cleanSegment) continue;
+
+      // Cek kapasitas chunk saat ini
+      if ((currentChunk.length + cleanSegment.length + 1) > (MAX_CHUNK_SIZE - WRAPPER_OVERHEAD)) {
+        // Jika penuh, simpan chunk yang ada
+        if (currentChunk) {
+          const fullSSML = `<speak>\n${currentChunk}\n</speak>`;
+          finalChunks.push({ 
+            id: chunkId++, 
+            ssml: fullSSML, 
+            charCount: fullSSML.length 
+          });
+          currentChunk = "";
         }
-        currentChunk = segment;
+        currentChunk = cleanSegment;
       } else {
-        currentChunk += segment;
+        // Masih muat, gabungkan
+        currentChunk += (currentChunk ? " " : "") + cleanSegment;
       }
     }
-    if (currentChunk.trim()) {
-      finalChunks.push({ id: chunkId, ssml: `<speak>\n${currentChunk}\n</speak>`, charCount: currentChunk.length });
+    
+    // Simpan sisa chunk terakhir
+    if (currentChunk) {
+      const fullSSML = `<speak>\n${currentChunk}\n</speak>`;
+      finalChunks.push({ 
+        id: chunkId++, 
+        ssml: fullSSML, 
+        charCount: fullSSML.length 
+      });
     }
 
     setChunks(finalChunks);

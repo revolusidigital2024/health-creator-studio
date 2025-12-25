@@ -1,144 +1,199 @@
 import React, { useState, useEffect } from 'react';
-import { ContentIdea, VisualScene } from '../../types';
+import { ContentIdea, VisualScene, Shot } from '../../types';
 import { generateVisualPrompts } from '../../services/geminiService';
-import { Film, Loader2, Copy, ArrowLeft, Check, Sparkles, RefreshCw, FileJson } from 'lucide-react';
+import { Film, Loader2, Copy, ArrowLeft, BotMessageSquare, Sparkles, RefreshCw, Clapperboard } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface Props {
   blueprint: Partial<ContentIdea>;
   onBack: () => void;
   onNext: () => void;
-  // TAMBAHAN: Fungsi buat nyimpen data ke Project Database
   onSaveData: (scenes: VisualScene[]) => void;
 }
 
-const CopyButton = ({ textToCopy }: { textToCopy: string }) => {
-  const [copied, setCopied] = useState(false);
-  const handleCopy = () => {
-    navigator.clipboard.writeText(textToCopy);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+// --- SUB-COMPONENT: SHOT CARD ---
+const ShotCard: React.FC<{ shot: Shot; index: number }> = ({ shot, index }) => {
+  const getShotTypeColor = (type: string) => {
+    switch (type) {
+      case '3D Animation': return 'bg-sky-100 text-sky-800 border-sky-200';
+      case 'Cinematic Emotion': return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'Macro Precision': return 'bg-lime-100 text-lime-800 border-lime-200';
+      default: return 'bg-slate-100 text-slate-800 border-slate-200';
+    }
   };
+
   return (
-    <button onClick={handleCopy} className={cn("px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1 transition-all border", copied ? "bg-emerald-50 text-emerald-600 border-emerald-200" : "bg-white text-slate-500 border-slate-200 hover:border-slate-400")}>
-      {copied ? <Check size={12} /> : <Copy size={12} />}
-      {copied ? 'Tersalin' : 'Salin'}
-    </button>
+    <div className="bg-white p-4 rounded-2xl border border-slate-200 group relative transition-all hover:border-emerald-300 hover:shadow-md">
+      <div className="flex items-center justify-between mb-3">
+        <span className={cn("text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border", getShotTypeColor(shot.shot_type))}>
+          {shot.shot_type}
+        </span>
+        <button
+          onClick={() => navigator.clipboard.writeText(shot.image_prompt)}
+          className="p-1.5 bg-slate-100 text-slate-400 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-emerald-100 hover:text-emerald-600"
+          title="Salin Prompt"
+        >
+          <Copy size={12} />
+        </button>
+      </div>
+      <p className="font-mono text-xs text-slate-600 leading-relaxed">{shot.image_prompt}</p>
+    </div>
   );
 };
 
+// --- MAIN COMPONENT ---
 export const StepVisuals: React.FC<Props> = ({ blueprint, onBack, onNext, onSaveData }) => {
-  // Load data awal dari blueprint jika sudah ada (biar gak generate ulang)
   const [scenes, setScenes] = useState<VisualScene[]>(blueprint.visualScenes || []);
   const [loading, setLoading] = useState(false);
-  
-  const fullScript = blueprint.outline?.map(sec => sec.scriptSegment || '').join('\n\n') || '';
 
-  // Auto-Run HANYA JIKA data belum ada
-  useEffect(() => {
-    if (fullScript && scenes.length === 0 && !loading) {
-      handleGenerate();
-    }
-  }, []); 
+  const handleCopyPrompts = () => {
+    const allPrompts = scenes.flatMap(scene => {
+      // Ambil prompt dari struktur baru (shots array)
+      if (scene.shots && scene.shots.length > 0) {
+        return scene.shots.map(s => s.image_prompt);
+      }
+      // Fallback untuk struktur lama
+      if ((scene as any).image_prompt) return [(scene as any).image_prompt];
+      return [];
+    });
+    navigator.clipboard.writeText(JSON.stringify(allPrompts, null, 2));
+    alert("✅ Semua prompt berhasil disalin ke clipboard!");
+  };
 
   const handleGenerate = async () => {
-    if (!fullScript) {
-      alert("Naskah kosong! Tidak ada yang bisa divisualisasikan.");
-      return;
-    }
     setLoading(true);
     try {
-      const result = await generateVisualPrompts(fullScript);
-      setScenes(result);
-      
-      // AUTO-SAVE SETELAH GENERATE
-      onSaveData(result); 
+      const fullScript = [
+        blueprint.hook || '',
+        ...(blueprint.outline?.map(sec => sec.scriptSegment || '') || [])
+      ].join('\n\n').trim();
 
-    } catch (e) {
-      console.error(e);
-      alert("Gagal membuat storyboard. Cek API Key.");
+      if (!fullScript) {
+        alert("Naskah lengkap kosong, tidak bisa membuat storyboard.");
+        setLoading(false);
+        return;
+      }
+
+      const generatedScenes = await generateVisualPrompts(fullScript);
+      setScenes(generatedScenes);
+      onSaveData(generatedScenes);
+    } catch (e: any) {
+      alert(`Gagal membuat storyboard: ${e.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleExportJSON = () => {
-    if (scenes.length === 0) return;
-    const promptsOnly = scenes.map(s => s.image_prompt);
-    const jsonString = JSON.stringify(promptsOnly, null, 2);
-    navigator.clipboard.writeText(jsonString);
-    alert('📦 JSON Prompts berhasil disalin ke clipboard!');
-  };
+  useEffect(() => {
+    const scenesData = blueprint.visualScenes;
+    // FIX: Cek juga state lokal 'scenes' untuk memastikan kita tidak generate ulang jika data sudah ada di memori
+    const hasLocalData = scenes.length > 0;
+    const hasBlueprintData = scenesData && scenesData.length > 0;
+
+    // HANYA generate otomatis jika data BENAR-BENAR kosong di kedua tempat (Blueprint & State Lokal)
+    // Kita hapus logika 'isOldFormat' dari auto-trigger untuk mencegah loop regenerasi.
+    if (!hasBlueprintData && !hasLocalData && !loading) {
+      handleGenerate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // FIX: Sync 2 Arah (Blueprint <-> Local State)
+  useEffect(() => {
+    // 1. Jika blueprint punya data, update state lokal (saat mount/remount)
+    if (blueprint.visualScenes && blueprint.visualScenes.length > 0) {
+      setScenes(blueprint.visualScenes);
+    } else if (scenes.length > 0 && (!blueprint.visualScenes || blueprint.visualScenes.length === 0)) {
+      // 2. Jika state lokal punya data tapi blueprint kosong (kasus navigasi cepat), simpan ke blueprint
+      onSaveData(scenes);
+    }
+  }, [blueprint.visualScenes, scenes]); // Tambahkan scenes ke dependency
 
   return (
-    <div className="space-y-6 animate-in fade-in max-w-5xl mx-auto">
-       
-       <div className="flex justify-between items-center bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-slate-200 shadow-lg sticky top-4 z-40">
-           <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center text-xl font-bold shadow-md"><Film size={20} /></div>
-              <div>
-                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Visual Director</p>
-                 <p className="font-bold text-slate-800 text-sm">Storyboard & B-Roll Prompts</p>
+    <div className="space-y-6 animate-in fade-in max-w-4xl mx-auto">
+      
+      {/* HEADER */}
+      <div className="flex justify-between items-center bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-slate-200 shadow-lg sticky top-4 z-40">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center text-xl font-bold shadow-md"><Clapperboard size={20} /></div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Storyboard & B-Roll</p>
+            <p className="font-bold text-slate-800 text-sm">Rencana Visual Video</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={handleCopyPrompts} disabled={loading || scenes.length === 0} className="px-4 py-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-slate-50 disabled:opacity-50">
+            <Copy size={14} /> Copy Prompts
+          </button>
+          <button onClick={handleGenerate} disabled={loading} className="px-4 py-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-slate-50">
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            {loading ? "Membuat..." : "Buat Ulang"}
+          </button>
+        </div>
+      </div>
+
+      {/* LOADING STATE */}
+      {loading && (
+        <div className="flex flex-col items-center justify-center text-center gap-4 p-16 bg-white rounded-2xl border border-slate-200 shadow-xl">
+          <Loader2 className="animate-spin text-emerald-600" size={48} />
+          <h3 className="text-lg font-bold text-slate-600 animate-pulse">AI sedang menjadi sutradara visual...</h3>
+          <p className="text-sm text-slate-400 max-w-sm">Menganalisis naskah dan merancang shot list B-Roll yang sinematik untuk Anda.</p>
+        </div>
+      )}
+
+      {/* SHOT LIST */}
+      {!loading && scenes.length > 0 && (
+        <div className="space-y-8">
+          {scenes.map((scene, sceneIndex) => (
+            <div key={sceneIndex} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-lg">
+              <div className="border-b border-slate-100 pb-4 mb-4">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Narasi</p>
+                <p className="text-sm font-medium text-slate-600 italic leading-relaxed">"{scene.scene_text}"</p>
               </div>
-           </div>
-           
-           <div className="flex gap-2">
-             {scenes.length > 0 && (
-               <button 
-                 onClick={handleExportJSON} 
-                 className="text-xs font-bold flex items-center gap-2 bg-emerald-50 text-emerald-600 border border-emerald-200 px-4 py-2 rounded-xl hover:bg-emerald-100 transition-colors"
-               >
-                 <FileJson size={14} /> Export JSON
-               </button>
-             )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(() => {
+                  // LOGIKA ADAPTER: Cek format baru (shots) -> kalau kosong, cek format lama (image_prompt)
+                  const shotsToRender = (scene.shots && scene.shots.length > 0) 
+                    ? scene.shots 
+                    : (scene as any).image_prompt 
+                      ? [{ shot_type: 'Visual (Legacy)', image_prompt: (scene as any).image_prompt }] 
+                      : [];
 
-             <button onClick={handleGenerate} disabled={loading} className="text-xs font-bold flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-xl hover:bg-slate-200 transition-colors disabled:opacity-50">
-               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-               {loading ? 'Meracik Visual...' : 'Buat Ulang'}
-             </button>
-           </div>
-       </div>
+                  if (shotsToRender.length === 0) return <div className="text-slate-400 text-xs italic p-4 border border-dashed border-slate-200 rounded-xl">Prompt visual tidak tersedia. Coba 'Buat Ulang'.</div>;
 
-       <div className="min-h-[400px]">
-         {loading ? (
-            <div className="flex flex-col items-center justify-center text-center gap-4 py-24 bg-white rounded-2xl border border-slate-100">
-               <Loader2 className="animate-spin text-emerald-600" size={48} />
-               <h3 className="text-lg font-bold text-slate-600 mt-2">AI sedang membayangkan adegan...</h3>
-               <p className="text-sm text-slate-400 max-w-md">Menganalisis naskah untuk membuat prompt gambar yang sesuai.</p>
+                  return shotsToRender.map((shot: any, shotIndex: number) => <ShotCard key={shotIndex} shot={shot} index={shotIndex} />);
+                })()}
+              </div>
             </div>
-         ) : scenes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center text-center gap-4 py-24 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-               <Film size={48} className="text-slate-300" />
-               <h3 className="text-lg font-bold text-slate-600">Belum ada Storyboard</h3>
-               <button onClick={handleGenerate} className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg active:scale-95">Buat Storyboard Sekarang</button>
-            </div>
-         ) : (
-            <div className="space-y-6">
-              {scenes.map((scene, idx) => (
-                <div key={idx} className="bg-white border border-slate-200 rounded-2xl grid grid-cols-1 md:grid-cols-12 gap-0 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                  <div className="md:col-span-7 p-6 bg-white border-b md:border-b-0 md:border-r border-slate-100">
-                     <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-2 block">Scene {idx + 1} • Audio</span>
-                     <p className="font-serif text-slate-700 leading-relaxed text-base">{scene.scene_text}</p>
-                  </div>
-                  <div className="md:col-span-5 bg-slate-50 p-6 flex flex-col justify-between">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-3 flex items-center gap-1"><Sparkles size={12}/> Visual Prompt (Midjourney)</p>
-                      <p className="font-mono text-[11px] text-slate-600 bg-white p-3 rounded-lg border border-slate-200 leading-relaxed select-all">{scene.image_prompt}</p>
-                    </div>
-                    <div className="flex justify-end mt-3">
-                      <CopyButton textToCopy={scene.image_prompt} />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-         )}
-       </div>
-       
-       <div className="flex justify-center gap-4 pt-8 border-t border-slate-100">
-         <button onClick={onBack} className="px-8 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-100 flex items-center gap-2"><ArrowLeft size={18} /> Kembali</button>
-         <button onClick={onNext} className="px-12 py-4 bg-emerald-600 text-white font-black rounded-2xl hover:bg-emerald-500 shadow-xl flex items-center gap-3 transition-all hover:scale-105">Lanjut ke Studio Vokal</button>
-       </div>
+          ))}
+        </div>
+      )}
+      
+      {/* EMPTY STATE */}
+      {!loading && scenes.length === 0 && (
+        <div className="flex flex-col items-center justify-center text-center gap-4 p-16 bg-white rounded-2xl border-2 border-dashed border-slate-200">
+          <Film size={40} className="text-slate-300" />
+          <h3 className="text-lg font-bold text-slate-600">Storyboard Kosong</h3>
+          <p className="text-sm text-slate-400 max-w-sm">Klik tombol di bawah untuk memulai analisis visual naskah Anda.</p>
+          <button onClick={handleGenerate} disabled={loading} className="mt-4 px-8 py-4 bg-emerald-600 text-white font-black rounded-2xl hover:bg-emerald-500 shadow-xl flex items-center gap-3">
+            <Sparkles size={18} /> Buat Storyboard
+          </button>
+        </div>
+      )}
+
+      {/* NAVIGATION */}
+      <div className="flex justify-center gap-4 pt-4">
+        <button onClick={onBack} className="px-8 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-100 flex items-center gap-2">
+          <ArrowLeft size={18} /> Kembali
+        </button>
+        <button
+          onClick={onNext}
+          disabled={scenes.length === 0}
+          className="px-12 py-4 bg-emerald-600 text-white font-black rounded-2xl hover:bg-emerald-500 shadow-xl flex items-center gap-3 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Lanjut ke Vocal Director <BotMessageSquare size={18} />
+        </button>
+      </div>
     </div>
   );
 };

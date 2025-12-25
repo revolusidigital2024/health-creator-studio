@@ -39,9 +39,14 @@ export interface Persona {
   bestFor?: string[];
 }
 
+export interface Shot {
+  shot_type: string;
+  image_prompt: string;
+}
+
 export interface VisualScene {
   scene_text: string;
-  image_prompt: string;
+  shots: Shot[];
 }
 
 export interface PackagingData {

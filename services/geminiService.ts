@@ -2,15 +2,15 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { VideoDuration, Persona, OutlineSection } from "../types";
 import { storageService } from "./storageService";
 import { 
-  buildOutlinePrompt, 
-  buildDraftingPrompt, 
-  buildWeeklyPlanPrompt, 
-  buildImagePrompt, 
+  buildOutlinePrompt,
+  buildDraftingPrompt,
+  buildWeeklyPlanPrompt,
+  buildImagePrompt,
   buildEnhancePrompt,
   buildSSMLPrompt,
   buildVisualPromptsPrompt,
   buildPackagingPrompt
-} from "./promptTemplates";
+} from "./prompts";
 
 // --- CONFIG ---
 const getGenAIModel = () => {
@@ -89,10 +89,10 @@ export const generateOutline = async (topic: string, age: string, niche: string,
 };
 
 // 3. DRAFTING
-export const generateScriptSegment = async (topic: string, section: OutlineSection, persona: Persona, age: string, lang: string, doctorName: string) => {
+export const generateScriptSegment = async (topic: string, section: OutlineSection, persona: Persona, age: string, lang: string, doctorName: string, hook: string) => {
   try {
     const model = getGenAIModel();
-    const prompt = buildDraftingPrompt(topic, section, persona, age, lang, doctorName);
+    const prompt = buildDraftingPrompt(topic, section, persona, age, lang, doctorName, hook);
     const result = await model.generateContent(prompt);
     let cleanText = result.response.text();
     cleanText = cleanText.replace(/\*\*/g, '').replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim();

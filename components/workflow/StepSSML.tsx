@@ -15,7 +15,10 @@ interface Props {
 export const StepSSML: React.FC<Props> = ({ 
   blueprint, selectedPersona, onBack, onNext, onAnalysisComplete 
 }) => {
-  const initialScript = blueprint.ssmlScript || blueprint.outline?.map(sec => sec.scriptSegment || '').join('\n\n') || '';
+  const initialScript = blueprint.ssmlScript || [
+    blueprint.hook || '', 
+    ...(blueprint.outline?.map(sec => sec.scriptSegment || '') || [])
+  ].join('\n\n').trim();
   
   const [directedScript, setDirectedScript] = useState(initialScript);
   const [loading, setLoading] = useState(false);
@@ -29,7 +32,10 @@ export const StepSSML: React.FC<Props> = ({
   const handleAnalyze = async () => {
     setLoading(true);
     try {
-      const rawScript = blueprint.outline?.map(sec => sec.scriptSegment || '').join('\n\n') || '';
+      const rawScript = [
+        blueprint.hook || '', 
+        ...(blueprint.outline?.map(sec => sec.scriptSegment || '') || [])
+      ].join('\n\n').trim();
       if (!rawScript) {
         alert("Naskah kosong.");
         setLoading(false);
