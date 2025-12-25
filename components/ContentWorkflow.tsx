@@ -114,12 +114,15 @@ export const ContentWorkflow: React.FC<ContentWorkflowProps> = ({
     }
   };
 
+  // --- LOGIC: GENERATE BLUEPRINT (FIXED SAVE) ---
   const startBlueprint = async (topicOverride?: string) => {
     const finalTopic = topicOverride || topic;
     const promptTopic = `[Format: ${currentFormat.label}] ${finalTopic}`;
     if (!finalTopic) return;
+    
     setLoading(true);
     if(topicOverride) setTopic(topicOverride);
+
     try {
       let data;
       if (engine === 'groq') {
@@ -127,10 +130,32 @@ export const ContentWorkflow: React.FC<ContentWorkflowProps> = ({
       } else {
         data = await generateOutline(promptTopic, channel.targetAge, channel.niche, language, duration);
       }
+      
+      // Update UI State
       setBlueprint(data);
       setStep(WorkflowStep.OUTLINING);
-      saveWork(WorkflowStep.OUTLINING); 
-    } catch (e: any) { alert(`Gagal Generate (${engine}): ${e.message}`); } finally { setLoading(false); }
+      
+      // 🔥 PERBAIKAN DI SINI:
+      // Jangan pakai saveWork() karena state blueprint belum update!
+      // Kita susun data manual dari variabel 'data'
+      const projectPayload = {
+        title: data.title,
+        topic: finalTopic,
+        format: selectedFormat,
+        blueprint: data, // Pakai data baru langsung
+        persona: selectedPersona,
+        step: 'OUTLINING'
+      };
+      
+      onSaveProject(projectPayload);
+      // Update session storage manual juga biar sinkron
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ ...projectPayload, lastUpdated: new Date().toISOString() }));
+
+    } catch (e: any) { 
+        alert(`Gagal Generate (${engine}): ${e.message}`); 
+    } finally { 
+        setLoading(false); 
+    }
   };
 
   const generateSegment = async (idx: number) => {

@@ -73,10 +73,13 @@ export const StepOutline: React.FC<Props> = ({ blueprint, formatLabel, onNext, o
   const [editableOutline, setEditableOutline] = useState(blueprint.outline || []);
   const [editingSecIdx, setEditingSecIdx] = useState<number | null>(null);
 
-  // PENTING: Sinkronisasi data saat regenerasi selesai
+  // 🔥 PERBAIKAN: SYNC STATE SAAT BLUEPRINT BERUBAH
+  // Ini wajib biar kalau di-regenerate, tampilannya ikut berubah
   useEffect(() => {
-    setEditableOutline(blueprint.outline || []);
-  }, [blueprint]);
+    if (blueprint.outline) {
+      setEditableOutline(blueprint.outline);
+    }
+  }, [blueprint]); // Trigger setiap blueprint berubah
 
   // Handlers
   const handlePointChange = (secIdx: number, pointIdx: number, newVal: string) => {
