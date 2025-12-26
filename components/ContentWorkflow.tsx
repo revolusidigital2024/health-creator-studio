@@ -22,10 +22,11 @@ interface ContentWorkflowProps {
   onBack: () => void;
   initialData?: Project | null;
   existingTitles?: string[];
+  onUpdateChannel: (channel: Channel) => void;
 }
 
 export const ContentWorkflow: React.FC<ContentWorkflowProps> = ({ 
-  channel, onSaveProject, language, onBack, initialData, existingTitles = [] 
+  channel, onSaveProject, language, onBack, initialData, existingTitles = [], onUpdateChannel
 }) => {
   
   // --- USE CUSTOM HOOK ---
@@ -56,7 +57,8 @@ export const ContentWorkflow: React.FC<ContentWorkflowProps> = ({
     language,
     onBack,
     initialData,
-    existingTitles
+    existingTitles,
+    onUpdateChannel
   });
 
   // --- RENDER UTAMA ---
@@ -86,6 +88,7 @@ export const ContentWorkflow: React.FC<ContentWorkflowProps> = ({
           onPlanGenerated={handlePlanGenerated}
           hasExistingData={!!blueprint}
           onResume={() => setStep(WorkflowStep.OUTLINING)}
+          existingTitles={existingTitles}
         />
       )}
 

@@ -21,6 +21,8 @@ export interface Channel {
   description: string;
   createdAt: string;
   doctorProfile?: DoctorProfile; 
+  historyTopics?: string;
+  savedWeeklyPlan?: WeeklyPlanItem[];
 }
 
 export interface OutlineSection {

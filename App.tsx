@@ -46,6 +46,13 @@ const App: React.FC = () => {
     setCurrentView(ViewState.PROJECT_LIST);
   };
 
+  // HANDLER BARU: Update channel tanpa ganti view (untuk background save)
+  const handleUpdateChannel = (updatedChannel: Channel) => {
+    const updatedChannels = channels.map(c => c.id === updatedChannel.id ? updatedChannel : c);
+    setChannels(updatedChannels);
+    storageService.saveChannels(updatedChannels);
+  };
+
   const handleDeleteChannel = (id: string) => {
     const updatedChannels = channels.filter(c => c.id !== id);
     const updatedProjects = projects.filter(p => p.channelId !== id);
@@ -125,8 +132,15 @@ const App: React.FC = () => {
       case ViewState.PROJECT_LIST:
         return activeChannel && <ProjectDashboard channel={activeChannel} projects={filteredProjects} onCreateNew={() => { setEditingProject(null); setCurrentView(ViewState.CONTENT_WORKFLOW); }} onBack={() => { setActiveChannelId(null); setCurrentView(ViewState.CHANNEL_HUB); }} onManageProject={handleManageProject} />;
       case ViewState.CONTENT_WORKFLOW:
-        // AMBIL SEMUA JUDUL YANG SUDAH ADA
-        const existingTitles = filteredProjects.map(p => p.title);
+        // AMBIL SEMUA JUDUL YANG SUDAH ADA (PROJECT APP + HISTORY CHANNEL)
+        const projectTitles = filteredProjects.map(p => p.title);
+        
+        // Parse history topics
+        const historyTitles = activeChannel?.historyTopics
+          ? activeChannel.historyTopics.split(/[\n,]+/).map(t => t.trim()).filter(t => t.length > 0)
+          : [];
+
+        const existingTitles = [...projectTitles, ...historyTitles];
         
         return activeChannel && (
           <ContentWorkflow 
@@ -136,6 +150,7 @@ const App: React.FC = () => {
             onBack={() => { setEditingProject(null); setCurrentView(ViewState.PROJECT_LIST); }}
             initialData={editingProject} 
             existingTitles={existingTitles} // KIRIM KE WORKFLOW
+            onUpdateChannel={handleUpdateChannel} // PROP BARU
           />
         );
       case ViewState.SETTINGS:

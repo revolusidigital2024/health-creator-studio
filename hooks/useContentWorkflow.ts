@@ -14,6 +14,7 @@ interface UseContentWorkflowProps {
   onBack: () => void;
   initialData?: Project | null;
   existingTitles?: string[];
+  onUpdateChannel: (channel: Channel) => void;
 }
 
 export const useContentWorkflow = ({
@@ -22,9 +23,11 @@ export const useContentWorkflow = ({
   language,
   onBack,
   initialData,
-  existingTitles = []
+  existingTitles = [],
+  onUpdateChannel
 }: UseContentWorkflowProps) => {
   const SESSION_KEY = `workflow_session_${channel.id}`;
+  const PLAN_CACHE_KEY = `weekly_plan_cache_${channel.id}`;
 
   // --- STATE ---
   const [step, setStep] = useState<WorkflowStep>(WorkflowStep.IDEATION);
@@ -60,7 +63,13 @@ export const useContentWorkflow = ({
       setSelectedFormat(d.format || 'list');
       setBlueprint(d.blueprint || null);
       setSelectedPersona(d.persona || null);
-      if (d.blueprint?.weeklyPlan) setWeeklyPlan(d.blueprint.weeklyPlan);
+      
+      // LOGIC BARU: Load plan dari project, kalau kosong ambil dari channel
+      if (d.blueprint?.weeklyPlan && d.blueprint.weeklyPlan.length > 0) {
+        setWeeklyPlan(d.blueprint.weeklyPlan);
+      } else if (channel.savedWeeklyPlan && channel.savedWeeklyPlan.length > 0) {
+        setWeeklyPlan(channel.savedWeeklyPlan);
+      }
 
       if (d.step) {
         setStep(d.step as WorkflowStep);
@@ -87,6 +96,17 @@ export const useContentWorkflow = ({
           setIsRestored(true);
           setTimeout(() => setIsRestored(false), 3000);
         } catch (e) { localStorage.removeItem(SESSION_KEY); }
+      } else {
+        // Cek Cache LocalStorage dulu (Prioritas Tertinggi untuk New Project)
+        const cachedPlan = localStorage.getItem(PLAN_CACHE_KEY);
+        if (cachedPlan) {
+          try {
+            setWeeklyPlan(JSON.parse(cachedPlan));
+          } catch (e) { /* Ignore invalid cache */ }
+        } else if (channel.savedWeeklyPlan && channel.savedWeeklyPlan.length > 0) {
+          // Fallback: Load plan dari channel data jika cache kosong
+          setWeeklyPlan(channel.savedWeeklyPlan);
+        }
       }
     }
   }, [initialData, SESSION_KEY]);
@@ -139,6 +159,10 @@ export const useContentWorkflow = ({
       if (newPlan && newPlan.length > 0) {
         setWeeklyPlan(newPlan);
         saveWork(step, { weeklyPlan: newPlan });
+        // LOGIC BARU: Simpan plan ke channel agar persisten
+        onUpdateChannel({ ...channel, savedWeeklyPlan: newPlan });
+        // Cache ke LocalStorage (Strategy: Caching per Channel)
+        localStorage.setItem(PLAN_CACHE_KEY, JSON.stringify(newPlan));
       }
     } catch (e) {
       console.error(e);

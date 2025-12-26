@@ -20,7 +20,8 @@ export const ChannelSetup: React.FC<ChannelSetupProps> = ({ channel, onSave, onC
       name: '',
       niche: 'Kesehatan Umum',
       targetAge: 'Adults',
-      description: ''
+      description: '',
+      historyTopics: ''
     }
   );
   
@@ -47,6 +48,7 @@ export const ChannelSetup: React.FC<ChannelSetupProps> = ({ channel, onSave, onC
       niche: formData.niche || 'General Health',
       targetAge: formData.targetAge as AgeGroup || 'Adults',
       description: formData.description || '',
+      historyTopics: formData.historyTopics || '',
       createdAt: channel?.createdAt || new Date().toISOString(),
       doctorProfile: doctor 
     });
@@ -148,6 +150,17 @@ export const ChannelSetup: React.FC<ChannelSetupProps> = ({ channel, onSave, onC
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Riwayat Video Lama (Anti-Duplikat)</label>
+              <textarea
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none h-32 resize-none text-sm font-medium placeholder:text-slate-400"
+                placeholder="Tempel daftar judul video lama Anda di sini (satu judul per baris atau dipisahkan koma)..."
+                value={formData.historyTopics || ''}
+                onChange={(e) => setFormData({ ...formData, historyTopics: e.target.value })}
+              />
+              <p className="text-[10px] text-slate-400 italic ml-1">Tips: Gunakan ekstensi browser untuk menyalin semua judul video Anda sekaligus.</p>
             </div>
         </div>
 

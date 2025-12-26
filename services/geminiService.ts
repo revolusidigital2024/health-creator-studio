@@ -54,10 +54,15 @@ const parseGeminiJson = (text: string) => {
 // --- SERVICES ---
 
 // 1. IDEATION
-export const suggestNicheTopics = async (niche: string, targetAge: string, language: string, useWebSearch: boolean) => {
+export const suggestNicheTopics = async (niche: string, targetAge: string, language: string, useWebSearch: boolean, existingTitles: string[] = []) => {
   try {
     const model = getGenAIModel();
-    const prompt = `Generate 5 viral video topic ideas for a health channel about "${niche}" targeting "${targetAge}". Language: ${language}. Return strictly a JSON array without markdown formatting: [{"topic": "...", "angle": "..."}]`;
+    
+    const forbidden = existingTitles.length > 0 
+      ? `\nCONTEXT: The user has ALREADY created content on these topics: [${existingTitles.join(", ")}]. DO NOT suggest these topics again. Find NEW angles or DIFFERENT sub-topics.` 
+      : "";
+
+    const prompt = `Generate 5 viral video topic ideas for a health channel about "${niche}" targeting "${targetAge}". Language: ${language}.${forbidden} Return strictly a JSON array without markdown formatting: [{"topic": "...", "angle": "..."}]`;
     const result = await model.generateContent(prompt);
     
     // Array Parsing Manual
@@ -112,14 +117,8 @@ export const generateWeeklyPlan = async (
 ) => {
   try {
     const model = getGenAIModel();
-    const prompt = buildWeeklyPlanPrompt(niche, targetAge, language, focusFormat);
-    
-    // Inject perintah anti-duplikat (Manual String Injection karena template sudah jadi string)
-    const forbidden = existingTitles.length > 0 
-      ? `\nIMPORTANT: DO NOT use these topics again: ${existingTitles.join(", ")}.` 
-      : "";
-    
-    const finalPrompt = prompt + forbidden;
+    // Logic anti-duplikat dipindahkan ke dalam builder prompt
+    const finalPrompt = buildWeeklyPlanPrompt(niche, targetAge, language, focusFormat, existingTitles);
 
     const result = await model.generateContent(finalPrompt);
     
